@@ -1,53 +1,64 @@
-# 🛎️ مشروع البيه البواب (El-Beh El-Bawab)
+# 🛎️ مشروع البيه البواب (El-Beh El-Bawab v2.0 - النسخة الكاملة)
 
-تطبيق ذكي لربط **سكان العمارات** بحارس العقار (**البيه البواب**) لتسهيل طلبات السوبرماركت والمخابز، الصيدليات، غسيل السيارات، خدمات الصيانة المنزلية (سباكة/كهرباء/غاز)، وحمل الأغراض، بالإضافة إلى لوحة إعلانات داخلية لكل عمارة.
+منصة متكاملة لربط **سكان العمارات** بحارس العقار (**البيه البواب**) لتسهيل طلبات السوبرماركت والمخابز، الصيدليات، غسيل السيارات، خدمات الصيانة المنزلية (سباكة/كهرباء/غاز)، وحمل الأغراض، بالإضافة إلى **محفظة الإكراميات وحساب العهدة**، **نظام التقييمات**، و**لوحة إعلانات العمارة الفورية**.
 
 ---
 
-## 🏗️ هيكل المشروع (Repository Structure)
-
-تم تصميم المستودع بنظام يفصل بوضوح بين **الواجهة الخلفية (Python Backend)** و **الواجهة الأمامية (Frontend)** ليتمكن باقي أعضاء الفريق من العمل بالتوازي دون تعارض:
+## 🏗️ هيكل المشروع المكتمل (Full Repository Structure)
 
 ```text
 el-beh-el-bawab/
-├── README.md                        # التوثيق الشامل للمشروع وخطة عمل الفريق
+├── README.md                        # التوثيق الشامل للمشروع ومسارات الـ API
 ├── .gitignore                       # تجاهل الملفات المؤقتة وقواعد البيانات المحلية
-├── .env.example                     # نموذج متغيرات البيئة
+├── .env.example                     # نموذج متغيرات البيئة وإعدادات السيرفر
 ├── docker-compose.yml               # تشغيل السيرفر بضغطة واحدة عبر Docker
+├── setup_el_beh_el_bawab.py         # سكربت التوليد التلقائي لجميع ملفات المشروع
 │
-├── backend/                         # 🐍 الواجهة الخلفية (Python + FastAPI + SQLite)
+├── backend/                         # 🐍 الواجهة الخلفية الكاملة (Python + FastAPI + SQLite + WebSockets)
 │   ├── Dockerfile
 │   ├── requirements.txt
 │   ├── app/
-│   │   ├── main.py                  # نقطة انطلاق السيرفر وتفعيل CORS والـ Routers
+│   │   ├── main.py                  # نقطة انطلاق السيرفر وتفعيل CORS والـ 7 Routers
 │   │   ├── core/
 │   │   │   ├── config.py            # إعدادات التطبيق ومسار قاعدة البيانات
-│   │   │   └── database.py          # إنشاء جداول SQLite + بيانات تجريبية جاهزة (Seed Data)
+│   │   │   ├── security.py          # توليد والتحقق من توكن المصادقة (HMAC-SHA256 Token)
+│   │   │   └── database.py          # إنشاء 7 جداول SQLite + بيانات تجريبية غنية (Seed Data)
 │   │   ├── schemas/
-│   │   │   └── models.py            # نماذج التحقق من البيانات (Pydantic Schemas)
+│   │   │   └── models.py            # نماذج التحقق من البيانات (Pydantic v2 Schemas)
 │   │   └── routers/
+│   │       ├── auth.py              # تسجيل الدخول برقم الهاتف وكود العمارة (/api/auth)
 │   │       ├── buildings.py         # إدارة العمارات ولوحة الإعلانات (/api/buildings)
 │   │       ├── users.py             # إدارة السكان والبوابين وحالة التواجد (/api/users)
-│   │       └── orders.py            # إدارة الطلبات، المشاوير، والإحصائيات (/api/orders)
+│   │       ├── orders.py            # إدارة الطلبات، الأولويات، والإحصائيات (/api/orders)
+│   │       ├── wallet.py            # محفظة الإكراميات، العهدة، وصندوق الصيانة (/api/wallet)
+│   │       ├── reviews.py           # تقييمات ومراجعات البواب (/api/reviews)
+│   │       └── notifications.py     # الإشعارات اللحظية وقناة WebSocket (/api/notifications)
 │   └── tests/
-│       └── test_api.py              # اختبارات آلية (Pytest) لجميع مسارات الـ API
+│       └── test_api.py              # اختبارات آلية شاملة لدورة حياة الطلب والمحفظة والتقييم
 │
-└── frontend/                        # 🎨 هيكل الواجهة الأمامية لباقي الفريق
-    ├── README_FRONTEND.md           # إرشادات خاصة بمطوري الـ Frontend
-    ├── index.html                   # شاشة تأسيسية تفاعلية (للساكن والبواب)
+└── frontend/                        # 🎨 الواجهة الأمامية التفاعلية الكاملة (RTL Arabic UI)
+    ├── README_FRONTEND.md           # دليل مطوري الواجهة الأمامية
+    ├── index.html                   # التطبيق التفاعلي الكامل (يعمل مع السيرفر أو بشكل مستقل)
     └── src/
-        ├── app.js                   # منطق ربط الشاشات بالـ API
-        ├── services/
-        │   └── api.js               # عميل API جاهز (Fetch Wrapper) لكل الـ Endpoints
-        └── styles/
-            └── main.css             # تنسيقات الهوية البصرية العربية (RTL)
+        └── services/
+            └── api.js               # عميل API كامل لجميع المسارات (Auth, Orders, Wallet, Reviews)
 ```
 
 ---
 
-## 🚀 طريقة تشغيل المشروع (Quick Start)
+## 🚀 طريقة التشغيل السريع (Quick Start)
 
-### 1️⃣ تشغيل الـ Backend (Python FastAPI)
+### 1️⃣ توليد الملفات ورفعها إلى GitHub
+ضع ملف `setup_el_beh_el_bawab.py` داخل مجلد الريبو لديك ثم نفّذ:
+
+```bash
+python setup_el_beh_el_bawab.py
+git add .
+git commit -m "feat: complete El-Beh El-Bawab v2.0 full-stack backend and interactive frontend"
+git push origin main
+```
+
+### 2️⃣ تشغيل الـ Backend (Python FastAPI)
 
 ```bash
 cd backend
@@ -61,48 +72,28 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload --port 8000
 ```
 
-* بمجرد التشغيل، سيقوم النظام تلقائياً بإنشاء قاعدة البيانات `el_beh_el_bawab.db` وإضافة **بيانات تجريبية جاهزة** (عمارة النيل الذهبية، عم عبد السميع البواب، سكان، وطلبات متنوعة) حتى يتمكن فريق الـ Frontend من التجربة فوراً.
-* **توثيق Swagger التفاعلي (لتجربة الـ API من المتصفح):**
-  افتح الرابط: `http://localhost:8000/docs`
+* افتح توثيق **Swagger UI** التفاعلي لتجربة كل المسارات: `http://localhost:8000/docs`
 
-### 2️⃣ تشغيل اختبارات الـ Backend (Tests)
-
-```bash
-cd backend
-pytest
-```
-
-### 3️⃣ تشغيل الـ Frontend التأسيسي
-
-يمكن لفريق الـ Frontend فتح ملف `frontend/index.html` عبر Live Server (أو استبدال مجلد `frontend/` بمشروع React / Next.js / Flutter مع استخدام ملف `frontend/src/services/api.js` الجاهز للربط).
+### 3️⃣ تشغيل الواجهة الأمامية الكاملة (`frontend/index.html`)
+افتح ملف `frontend/index.html` مباشرة في المتصفح أو عبر Live Server، وستجد كافة الشاشات (واجهة الساكن، لوحة تحكم عم عبد السميع، محفظة الإكراميات والعهدة، لوحة الإعلانات، التقييمات، ودليل الشقق) تعمل بشكل فوري.
 
 ---
 
-## 🔌 أهم مسارات الـ API الجاهزة (API Endpoints)
+## 🔌 جدول مسارات الـ API الكامل (v2.0 Endpoints)
 
-| الطريقة (Method) | المسار (Endpoint) | الوظيفة |
-| :--- | :--- | :--- |
-| `GET` | `/api/buildings` | جلب قائمة العمارات المسجلة وإحصائيات كل عمارة |
-| `POST` | `/api/buildings` | تسجيل عمارة جديدة بكود دعوة خاص (`invite_code`) |
-| `GET` | `/api/buildings/{id}/announcements` | عرض إعلانات وتنبيهات العمارة (مثل مواعيد صيانة الأسانسير) |
-| `POST` | `/api/buildings/{id}/announcements` | نشر تنبيه جديد لسكان العمارة |
-| `GET` | `/api/users?building_id=1` | جلب السكان والبوابين في العمارة |
-| `POST` | `/api/users` | تسجيل ساكن جديد أو بواب |
-| `PATCH` | `/api/users/{id}/availability` | تغيير حالة تواجد البواب (متاح / مشغول خارج العمارة) |
-| `GET` | `/api/orders/categories` | قائمة أنواع الخدمات بالعربية (سوبرماركت، صيدلية، غسيل سيارات، صيانة...) |
-| `GET` | `/api/orders?building_id=1` | عرض الطلبات مرتبة تلقائياً حسب الأولوية (`urgent` أولاً) |
-| `POST` | `/api/orders` | إرسال طلب جديد من الساكن إلى البواب |
-| `PATCH` | `/api/orders/{id}/status` | تحديث حالة الطلب (`pending` ⬅️ `accepted` ⬅️ `in_progress` ⬅️ `delivered`) |
-| `GET` | `/api/orders/stats/{building_id}` | إحصائيات العمارة وإجمالي إكراميات البواب |
-
----
-
-## 👥 تقسيم المهام المقترح لباقي الفريق (Next Steps for the Team)
-
-1. **فريق الواجهة الأمامية (Frontend / Mobile):**
-   - استخدام `frontend/src/services/api.js` لبناء شاشات الساكن وشاشة البواب.
-   - إضافة شاشة تسجيل الدخول برقم الهاتف وكود العمارة (`NILE-15`).
-   - تصميم بطاقات حالة الطلب مع ألوان واضحة للطلبات المستعجلة.
-2. **فريق الواجهة الخلفية (Backend Extensions):**
-   - إضافة مصادقة JWT / OTP لرقم الموبايل.
-   - إضافة WebSockets للإشعارات اللحظية بمجرد إرسال طلب جديد.
+| القسم | الطريقة | المسار (Endpoint) | الوظيفة |
+| :--- | :--- | :--- | :--- |
+| **Auth** | `POST` | `/api/auth/login` | تسجيل الدخول برقم الموبايل وكود العمارة (`NILE-15`) ورمز OTP (`1234`) |
+| **Auth** | `POST` | `/api/auth/register` | إنشاء حساب ساكن جديد وإصدار `access_token` |
+| **Auth** | `GET` | `/api/auth/me` | جلب بيانات المستخدم الحالي من التوكن |
+| **Buildings** | `GET` | `/api/buildings` | جلب قائمة العمارات وإحصائيات السكان والطلبات |
+| **Buildings** | `GET/POST` | `/api/buildings/{id}/announcements` | عرض ونشر إعلانات وتنبيهات العمارة |
+| **Users** | `GET/POST` | `/api/users` | عرض أو إضافة سكان وبوابين |
+| **Users** | `PATCH` | `/api/users/{id}/availability` | تحديث حالة تواجد البواب (متاح الآن / في مشوار خارج العمارة) |
+| **Orders** | `GET/POST` | `/api/orders` | عرض الطلبات (مرتبة حسب الأولوية) أو إرسال طلب جديد |
+| **Orders** | `PATCH` | `/api/orders/{id}/status` | تحديث حالة الطلب وتسجيل الفاتورة الفعلية وإضافة الإكرامية للمحفظة |
+| **Orders** | `GET` | `/api/orders/stats/{building_id}` | إحصائيات العمارة (الكل، قيد الانتظار، جاري التنفيذ، المكتملة) |
+| **Wallet** | `GET/POST` | `/api/wallet/transactions` | سجل المعاملات المالية (إكراميات، سداد عهدة، صيانة العمارة) |
+| **Wallet** | `GET` | `/api/wallet/summary/{building_id}` | ملخص أرصدة محفظة البواب، العهدة غير المسددة، وصندوق الصيانة |
+| **Reviews** | `GET/POST` | `/api/reviews` | إضافة وعرض تقييمات السكان لخدمة البواب |
+| **Realtime** | `WS` | `/api/notifications/ws/{building_id}` | قناة WebSocket للإشعارات اللحظية للعمارة |
