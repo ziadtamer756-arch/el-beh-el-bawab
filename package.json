@@ -1,0 +1,23 @@
+{
+  "name": "el-beh-el-bawab-desktop-command-center",
+  "version": "4.0.0",
+  "private": true,
+  "description": "نسخة الكمبيوتر المستقلة - لوحة تحكم العمارة واتحاد الملاك (React + Recharts + 15 AI Agents + 15 APIs)",
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "lucide-react": "^0.360.0",
+    "recharts": "^2.12.3",
+    "zustand": "^4.5.2",
+    "axios": "^1.6.8"
+  },
+  "devDependencies": {
+    "vite": "^5.2.0",
+    "@vitejs/plugin-react": "^4.2.1",
+    "tailwindcss": "^3.4.1"
+  },
+  "scripts": {
+    "dev": "vite --port 3000",
+    "build": "vite build"
+  }
+}

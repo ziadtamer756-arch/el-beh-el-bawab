@@ -1,0 +1,219 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "project": "البيه البواب - El-Beh El-Bawab v4.0 Super-App",
+  "architecture": "Python FastAPI Async + React 18 (Mobile & Desktop Separate Apps) + JSON Schema Engine",
+  "competitor_inspirations": {
+    "uber_features": {
+      "live_captain_radar": "تتبع لحظي لموقع البواب (في العمارة / في الفرن / في السوبرماركت / في الصيدلية) مع حساب وقت الوصول المتوقع (ETA بالدقائق)",
+      "dynamic_surge_pricing": "تسعير ذكي للإكرامية وقت الذروة (ساعة الفطار 8-10 ص، وقت الغداء، أو الطلبات الثقيلة كأنبوبة البوتاجاز)",
+      "pin_drop_verification": "كود استلام رباعي (OTP Drop-off PIN) لتأكيد تسليم الطرود الثمينة أو العهدة المالية"
+    },
+    "careem_super_app_features": {
+      "everything_app_grid": "شبكة خدمات موحدة (Bawab Box / Careem Quik): سوبرماركت، صيدلية، غسيل سيارات، سباكة وكهرباء، استلام طرود، وتصاريح زوار",
+      "captain_loyalty_tiers": "نظام رتب ومكافآت البواب (Captain Gold / Platinum) بناءً على سرعة الاستجابة وتقييم السكان (4.9★)",
+      "careem_pay_instapay_qr": "تحويل فوري بضغطة واحدة عبر InstaPay أو محفظة العمارة الداخلية"
+    },
+    "halan_fintech_features": {
+      "micro_credit_custody_bnpl": "نظام «حالاً على النوتة / تقسيط العهدة»: يتيح للساكن طلب مشتريات وصيانة حتى حد ائتماني 1500 ج.م والسداد آخر الشهر، أو سلفة فورية للبواب",
+      "group_errand_saving": "تجميع طلبات العمارة في مشوار واحد لتوفير 50% من رسوم المشوار (Halan Cart Pooling)",
+      "automated_installments": "تقسيط اشتراكات الصيانة السنوية أو إصلاحات الأسانسير الكبرى على دفعات شهرية ميسرة"
+    }
+  },
+  "backend_python_advanced_libraries": [
+    "fastapi>=0.110.0 (Async REST & WebSockets Engine)",
+    "pydantic>=2.6.0 (Strict JSON Schema Validation & Serialization)",
+    "uvicorn[standard]>=0.27.0 (ASGI High-Performance Server)",
+    "sqlalchemy>=2.0.0 / aiosqlite (Async Relational ORM & SQLiteWAL)",
+    "httpx>=0.27.0 (Async HTTP Client for AI & Payment Gateways)",
+    "PyJWT & cryptography (Token Signing & OTP Verification)",
+    "numpy & pandas (Demand Forecasting & Utility Bill Splitting Analytics)",
+    "pytest & pytest-asyncio (Automated Test Suite)"
+  ],
+  "frontend_react_advanced_libraries": [
+    "react & react-dom 18 (Hooks, Context, Concurrent UI)",
+    "lucide-react (Modern Vector Icons for Mobile & Desktop)",
+    "recharts (Interactive Analytics, Revenue & Surge Charts)",
+    "tailwindcss (RTL Arabic Responsive Design System)"
+  ],
+  "editions": {
+    "mobile_phone_edition": {
+      "file": "el_beh_mobile_app.jsx",
+      "zip_bundle": "el-beh-mobile-edition.zip",
+      "target": "تطبيق شاشة الموبايل للسكان والبواب (React Mobile Super-App UI)"
+    },
+    "desktop_computer_edition": {
+      "file": "el_beh_desktop_app.jsx",
+      "zip_bundle": "el-beh-desktop-edition.zip",
+      "target": "لوحة تحكم الكمبيوتر لإدارة العمارة واتحاد الملاك والـ 15 AI Agents والـ 15 APIs (React Desktop Command Center)"
+    }
+  },
+  "ai_agents_15_catalog": [
+    {
+      "id": "agent_01_order_parser",
+      "num": 1,
+      "name_ar": "وكيل تحليل الطلبات باللهجة المصرية",
+      "inspired_by": "Careem Quik AI"
+    },
+    {
+      "id": "agent_02_price_estimator",
+      "num": 2,
+      "name_ar": "وكيل تسعير المشتريات والـ Surge Pricing",
+      "inspired_by": "Uber Dynamic Pricing"
+    },
+    {
+      "id": "agent_03_errand_batcher",
+      "num": 3,
+      "name_ar": "وكيل تجميع المشاوير وخط السير (Route Optimizer)",
+      "inspired_by": "Uber Pool / Halan Dispatch"
+    },
+    {
+      "id": "agent_04_maintenance_diagnostician",
+      "num": 4,
+      "name_ar": "وكيل تشخيص أعطال الصيانة المنزلية",
+      "inspired_by": "Smart Home Diagnostics"
+    },
+    {
+      "id": "agent_05_invoice_auditor",
+      "num": 5,
+      "name_ar": "وكيل مراجعة الفواتير وكشف فروق الأسعار",
+      "inspired_by": "Fintech Fraud Detection"
+    },
+    {
+      "id": "agent_06_urgency_dispatcher",
+      "num": 6,
+      "name_ar": "وكيل ترتيب الأولويات والطوارئ الذكي",
+      "inspired_by": "Uber Priority Dispatch"
+    },
+    {
+      "id": "agent_07_announcement_writer",
+      "num": 7,
+      "name_ar": "وكيل صياغة إعلانات وتنبيهات العمارة",
+      "inspired_by": "GenAI Copywriter"
+    },
+    {
+      "id": "agent_08_utility_splitter",
+      "num": 8,
+      "name_ar": "وكيل تقسيم فواتير المرافق وصندوق الصيانة",
+      "inspired_by": "Splitwise / Halan Bills"
+    },
+    {
+      "id": "agent_09_security_gatekeeper",
+      "num": 9,
+      "name_ar": "وكيل أمن البوابة وتصاريح الزوار (OTP Pass)",
+      "inspired_by": "Uber PIN Verification"
+    },
+    {
+      "id": "agent_10_car_garage_coordinator",
+      "num": 10,
+      "name_ar": "وكيل تنسيق الجراج ومواعيد غسيل السيارات",
+      "inspired_by": "Careem Car Wash"
+    },
+    {
+      "id": "agent_11_voice_chat_assistant",
+      "num": 11,
+      "name_ar": "وكيل الردود الذكية وتلخيص الرسائل الصوتية",
+      "inspired_by": "Uber One-Tap Captain Reply"
+    },
+    {
+      "id": "agent_12_package_tracker",
+      "num": 12,
+      "name_ar": "وكيل إدارة أمانات البوابة واستلام الطرود",
+      "inspired_by": "Careem Box"
+    },
+    {
+      "id": "agent_13_bawab_coach_sentiment",
+      "num": 13,
+      "name_ar": "وكيل تحليل رضا السكان ومكافآت الكابتن",
+      "inspired_by": "Careem Captain Pro Tiers"
+    },
+    {
+      "id": "agent_14_emergency_sos",
+      "num": 14,
+      "name_ar": "وكيل إدارة الطوارئ والاستغاثة الفورية (SOS)",
+      "inspired_by": "Uber In-App Emergency Button"
+    },
+    {
+      "id": "agent_15_predictive_restock",
+      "num": 15,
+      "name_ar": "وكيل التنبؤ بالطلبات الأسبوعية والائتمان المصغر",
+      "inspired_by": "Halan Micro-Finance & Restock"
+    }
+  ],
+  "apis_15_endpoints": [
+    {
+      "id": "api_01",
+      "prefix": "/api/auth",
+      "desc": "تسجيل الدخول، كود العمارة، ورمز التحقق OTP"
+    },
+    {
+      "id": "api_02",
+      "prefix": "/api/buildings",
+      "desc": "بيانات العمارة، حالة الأسانسير، وموتور المياه"
+    },
+    {
+      "id": "api_03",
+      "prefix": "/api/users",
+      "desc": "السكان، الكابتن البواب، وتبديل حالة التواجد"
+    },
+    {
+      "id": "api_04",
+      "prefix": "/api/orders",
+      "desc": "الطلبات، التسعير المرن (Surge)، وتتبع خط السير"
+    },
+    {
+      "id": "api_05",
+      "prefix": "/api/maintenance",
+      "desc": "بلاغات السباكة والكهرباء والغاز والتشخيص الذكي"
+    },
+    {
+      "id": "api_06",
+      "prefix": "/api/visitors",
+      "desc": "تصاريح دخول الزوار والدليفري بكود QR/PIN"
+    },
+    {
+      "id": "api_07",
+      "prefix": "/api/parcels",
+      "desc": "استلام الطرود وأمانات البوابة والدفع عند الاستلام COD"
+    },
+    {
+      "id": "api_08",
+      "prefix": "/api/garage",
+      "desc": "إدارة باكيات الجراج واشتراكات غسيل السيارات"
+    },
+    {
+      "id": "api_09",
+      "prefix": "/api/utilities",
+      "desc": "تقسيم فواتير المياه وكهرباء الأسانسير"
+    },
+    {
+      "id": "api_10",
+      "prefix": "/api/wallet",
+      "desc": "محفظة الكابتن، تقسيط حالاً (BNPL)، ودفتر العهدة"
+    },
+    {
+      "id": "api_11",
+      "prefix": "/api/announcements",
+      "desc": "لوحة إعلانات العمارة والتنبيهات المثبتة"
+    },
+    {
+      "id": "api_12",
+      "prefix": "/api/reviews",
+      "desc": "تقييمات السكان ونظام نقاط الولاء للكابتن"
+    },
+    {
+      "id": "api_13",
+      "prefix": "/api/chat",
+      "desc": "المحادثة الفورية والردود الذكية بضغطة واحدة"
+    },
+    {
+      "id": "api_14",
+      "prefix": "/api/emergency",
+      "desc": "زر استغاثة الطوارئ SOS وقناة WebSocket اللحظية"
+    },
+    {
+      "id": "api_15",
+      "prefix": "/api/ai-agents",
+      "desc": "بوابة تشغيل الـ 15 AI Agents وسجل قراراتها"
+    }
+  ]
+}
