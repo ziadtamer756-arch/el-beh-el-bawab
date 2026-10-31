@@ -1,0 +1,2215 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>البيه البواب | El-Beh El-Bawab v2.0 - المنصة المتكاملة</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    body {
+      font-family: 'Cairo', sans-serif;
+      background-color: #f1f5f9;
+      color: #0f172a;
+    }
+    .tab-active {
+      background-color: #0f766e !important;
+      color: #ffffff !important;
+      box-shadow: 0 4px 12px rgba(15, 118, 110, 0.25);
+    }
+    .role-pill-active {
+      background-color: #ffffff !important;
+      color: #0f766e !important;
+      font-weight: 800;
+    }
+    .pulse-dot {
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.55; transform: scale(1.15); }
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+  <!-- Toast Notification Banner -->
+  <div id="toast-container" class="fixed bottom-5 left-5 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none"></div>
+
+  <!-- Top Header / Building Banner -->
+  <header class="bg-gradient-to-l from-teal-800 via-teal-700 to-emerald-700 text-white shadow-lg">
+    <div class="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8">
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        
+        <!-- Brand & Building Badge -->
+        <div class="flex items-center gap-3">
+          <div class="w-12 h-12 rounded-2xl bg-amber-400 text-slate-900 flex items-center justify-center text-2xl font-black shadow-md">
+            🛎️
+          </div>
+          <div>
+            <div class="flex items-center gap-2 flex-wrap">
+              <h1 class="text-xl sm:text-2xl font-black tracking-tight">البيه البواب</h1>
+              <span class="bg-amber-400/20 border border-amber-300/40 text-amber-200 text-xs font-bold px-2.5 py-0.5 rounded-full">
+                كود العمارة: NILE-15
+              </span>
+              <span id="connection-badge" class="bg-emerald-950/60 text-emerald-200 text-xs px-2.5 py-0.5 rounded-full border border-emerald-400/30">
+                ⚡ متصل (Hybrid Store + FastAPI)
+              </span>
+            </div>
+            <p class="text-teal-100 text-xs sm:text-sm mt-0.5" id="building-subtitle">
+              عمارة النيل الذهبية • ١٥ شارع التحرير - الدقي (١٢ طابق)
+            </p>
+          </div>
+        </div>
+
+        <!-- Active User & Role Switcher -->
+        <div class="flex flex-wrap items-center gap-2 sm:gap-3">
+          <!-- Bawab Live Availability Badge -->
+          <div id="bawab-status-pill" class="flex items-center gap-2 bg-white/10 backdrop-blur px-3 py-1.5 rounded-xl border border-white/15 text-xs sm:text-sm">
+            <span id="bawab-status-dot" class="w-2.5 h-2.5 rounded-full bg-emerald-400 pulse-dot"></span>
+            <span>عم عبد السميع:</span>
+            <strong id="bawab-status-text" class="text-emerald-200">متاح الآن بالعمارة</strong>
+          </div>
+
+          <!-- Role Switcher Buttons -->
+          <div class="flex bg-teal-950/50 p-1 rounded-xl border border-white/15">
+            <button id="switch-resident-btn" type="button" class="px-3 py-1.5 rounded-lg text-xs sm:text-sm text-teal-100 transition role-pill-active">
+              👤 واجهة البيه (الساكن)
+            </button>
+            <button id="switch-bawab-btn" type="button" class="px-3 py-1.5 rounded-lg text-xs sm:text-sm text-teal-100 transition">
+              🛎️ واجهة عم عبد السميع (البواب)
+            </button>
+          </div>
+
+          <!-- Active Resident Selector -->
+          <select id="active-user-select" aria-label="اختر المستخدم الحالي" class="bg-teal-900/90 text-white text-xs sm:text-sm font-bold px-3 py-2 rounded-xl border border-teal-500/40 focus:outline-none">
+            <option value="2">أستاذ أحمد زكي (شقة 12 - الدور 4)</option>
+            <option value="3">مدام سعاد (شقة 20 - الدور 7)</option>
+            <option value="4">مهندس طارق علام (شقة 5 - الدور 2)</option>
+            <option value="1">عم عبد السميع (البيه البواب)</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Navigation Tabs -->
+      <nav class="mt-4 pt-3 border-t border-teal-600/50 flex items-center gap-2 overflow-x-auto pb-1">
+        <button type="button" data-tab="orders" class="nav-tab-btn tab-active px-4 py-2 rounded-xl text-xs sm:text-sm font-bold bg-teal-900/40 text-teal-100 whitespace-nowrap transition">
+          📦 الطلبات والمشاوير والخدمات
+        </button>
+        <button type="button" data-tab="wallet" class="nav-tab-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-bold bg-teal-900/40 text-teal-100 whitespace-nowrap transition">
+          💰 محفظة الإكراميات وحساب العهدة
+        </button>
+        <button type="button" data-tab="announcements" class="nav-tab-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-bold bg-teal-900/40 text-teal-100 whitespace-nowrap transition">
+          📢 لوحة إعلانات العمارة (<span id="nav-ann-count">2</span>)
+        </button>
+        <button type="button" data-tab="reviews" class="nav-tab-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-bold bg-teal-900/40 text-teal-100 whitespace-nowrap transition">
+          ⭐ تقييمات عم عبد السميع (<span id="nav-rating-avg">4.9</span>)
+        </button>
+        <button type="button" data-tab="residents" class="nav-tab-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-bold bg-teal-900/40 text-teal-100 whitespace-nowrap transition">
+          🏢 دليل الشقق وتسجيل ساكن
+        </button>
+        <button type="button" data-tab="aichat" class="nav-tab-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-bold bg-teal-900/40 text-teal-100 whitespace-nowrap transition flex items-center gap-2 border border-emerald-400/30">
+          <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 pulse-dot"></span>
+          🤖 شات المساعد الذكي (عم عبد السميع)
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Main Content Container -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 py-6 sm:px-6 lg:px-8 space-y-6">
+
+    <!-- Top Summary KPI Cards -->
+    <section class="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
+      <div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm">
+        <div class="text-xs font-bold text-slate-500">إجمالي الطلبات</div>
+        <div class="text-2xl sm:text-3xl font-black text-slate-900 mt-1" id="kpi-total">4</div>
+        <div class="text-xs text-teal-700 font-semibold mt-1">بالعمارة هذا الأسبوع</div>
+      </div>
+      <div class="bg-white rounded-2xl p-4 border border-amber-200 shadow-sm">
+        <div class="text-xs font-bold text-amber-700">قيد الانتظار (جديد)</div>
+        <div class="text-2xl sm:text-3xl font-black text-amber-600 mt-1" id="kpi-pending">1</div>
+        <div class="text-xs text-slate-500 mt-1">بانتظار قبول البواب</div>
+      </div>
+      <div class="bg-white rounded-2xl p-4 border border-sky-200 shadow-sm">
+        <div class="text-xs font-bold text-sky-700">جاري تنفيذها الآن</div>
+        <div class="text-2xl sm:text-3xl font-black text-sky-600 mt-1" id="kpi-active">2</div>
+        <div class="text-xs text-slate-500 mt-1">مشاوير وطلبات نشطة</div>
+      </div>
+      <div class="bg-white rounded-2xl p-4 border border-emerald-200 shadow-sm">
+        <div class="text-xs font-bold text-emerald-700">تم توصيلها بنجاح</div>
+        <div class="text-2xl sm:text-3xl font-black text-emerald-600 mt-1" id="kpi-delivered">1</div>
+        <div class="text-xs text-slate-500 mt-1">مكتملة ومستلمة</div>
+      </div>
+      <div class="col-span-2 lg:col-span-1 bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl p-4 border border-amber-300/70 shadow-sm">
+        <div class="text-xs font-bold text-amber-900">محفظة إكراميات البواب</div>
+        <div class="text-2xl sm:text-3xl font-black text-amber-700 mt-1"><span id="kpi-bawab-wallet">465</span> <span class="text-sm font-bold">ج.م</span></div>
+        <div class="text-xs text-amber-800 mt-1">⭐ التقييم العام: <span id="kpi-bawab-rating">4.9</span>/5</div>
+      </div>
+    </section>
+
+    <!-- TAB 1: ORDERS & SERVICES (الطلبات والمشاوير والخدمات) -->
+    <section id="tab-view-orders" class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      
+      <!-- Left Column: Action Panel (Changes based on Resident vs Bawab mode) -->
+      <div class="lg:col-span-5 space-y-5">
+        
+        <!-- Bawab Control Card (Visible in Bawab Role) -->
+        <div id="bawab-control-card" class="hidden bg-gradient-to-br from-slate-900 to-teal-950 text-white rounded-2xl p-5 shadow-md border border-teal-700/40">
+          <div class="flex items-center justify-between mb-3">
+            <h2 class="text-lg font-extrabold flex items-center gap-2">
+              🛎️ لوحة تحكم عم عبد السميع
+            </h2>
+            <button id="toggle-availability-btn" type="button" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-500 hover:bg-emerald-400 text-slate-950 transition">
+              تغيير الحالة: متاح الآن
+            </button>
+          </div>
+          <p class="text-xs text-teal-200 mb-4">
+            يمكنك من هنا قبول طلبات السكان، تسجيل الفاتورة الفعلية للمشتريات، وتأكيد توصيل الطلب لباب الشقة.
+          </p>
+          <div class="grid grid-cols-2 gap-3 text-center">
+            <div class="bg-white/10 rounded-xl p-3">
+              <div class="text-xs text-teal-200">مشتريات غير مسددة (عهدة)</div>
+              <div class="text-xl font-black text-amber-300 mt-1"><span id="bawab-unpaid-custody">425</span> ج.م</div>
+            </div>
+            <div class="bg-white/10 rounded-xl p-3">
+              <div class="text-xs text-teal-200">إكراميات اليوم</div>
+              <div class="text-xl font-black text-emerald-300 mt-1"><span id="bawab-today-tips">130</span> ج.م</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Create New Order Form (For Residents & Quick Entry) -->
+        <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-base sm:text-lg font-extrabold text-teal-900">
+              ➕ طلب مشوار أو خدمة من البيه البواب
+            </h2>
+            <span class="text-xs bg-teal-50 text-teal-700 font-bold px-2.5 py-1 rounded-lg border border-teal-200" id="form-resident-badge">
+              شقة 12
+            </span>
+          </div>
+
+          <!-- Quick Templates Bar -->
+          <div class="mb-4">
+            <div class="text-xs font-bold text-slate-500 mb-2">⚡ قوالب سريعة بضغطة واحدة:</div>
+            <div class="flex flex-wrap gap-1.5">
+              <button type="button" data-template="bread" class="quick-template-btn text-xs bg-slate-100 hover:bg-teal-50 hover:text-teal-800 px-2.5 py-1.5 rounded-lg font-semibold border border-slate-200 transition">
+                🥖 عيش سخن ولبن
+              </button>
+              <button type="button" data-template="gas" class="quick-template-btn text-xs bg-slate-100 hover:bg-teal-50 hover:text-teal-800 px-2.5 py-1.5 rounded-lg font-semibold border border-slate-200 transition">
+                🔥 تغيير أنبوبة بوتاجاز
+              </button>
+              <button type="button" data-template="car" class="quick-template-btn text-xs bg-slate-100 hover:bg-teal-50 hover:text-teal-800 px-2.5 py-1.5 rounded-lg font-semibold border border-slate-200 transition">
+                🚗 غسيل العربية الصبح
+              </button>
+              <button type="button" data-template="pharmacy" class="quick-template-btn text-xs bg-slate-100 hover:bg-teal-50 hover:text-teal-800 px-2.5 py-1.5 rounded-lg font-semibold border border-slate-200 transition">
+                💊 دواء من الصيدلية
+              </button>
+              <button type="button" data-template="luggage" class="quick-template-btn text-xs bg-slate-100 hover:bg-teal-50 hover:text-teal-800 px-2.5 py-1.5 rounded-lg font-semibold border border-slate-200 transition">
+                🧳 تنزيل شنط سفر
+              </button>
+            </div>
+          </div>
+
+          <form id="create-order-form" class="space-y-3.5">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1" for="order-category">نوع الخدمة</label>
+                <select id="order-category" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm focus:border-teal-600 focus:outline-none">
+                  <option value="groceries">🛒 طلبات سوبرماركت وخضار</option>
+                  <option value="pharmacy">💊 صيدلية وأدوية</option>
+                  <option value="car_wash">🚗 غسيل سيارات</option>
+                  <option value="plumbing_electrical">🔧 صيانة (سباكة / كهرباء / غاز)</option>
+                  <option value="luggage_help">🧳 حمل شنط وأغراض ثقيلة</option>
+                  <option value="cleaning">🧹 تنظيف ومسح سلم/شقة</option>
+                  <option value="errand">📦 مشوار خاص / استلام طرد</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1" for="order-urgency">الأولوية</label>
+                <select id="order-urgency" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm focus:border-teal-600 focus:outline-none">
+                  <option value="normal">🟢 عادي (خلال اليوم)</option>
+                  <option value="urgent">🔥 مستعجل الآن</option>
+                  <option value="scheduled">⏰ بموعد محدد</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1" for="order-title">عنوان الطلب المختصر</label>
+              <input id="order-title" type="text" required placeholder="مثال: طلبات عشاء من سوبرماركت سعودي" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm focus:border-teal-600 focus:outline-none" />
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1" for="order-details">التفاصيل والأصناف المطلوبة</label>
+              <textarea id="order-details" rows="3" required placeholder="اكتب الأصناف بالتفصيل أو وصف الخدمة المطلوبة..." class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm focus:border-teal-600 focus:outline-none"></textarea>
+            </div>
+
+            <div class="grid grid-cols-3 gap-2.5">
+              <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1" for="order-est-cost">تكلفة متوقعة (ج.م)</label>
+                <input id="order-est-cost" type="number" min="0" value="100" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm focus:border-teal-600 focus:outline-none" />
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1" for="order-tip">إكرامية البواب (ج.م)</label>
+                <input id="order-tip" type="number" min="0" value="20" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm focus:border-teal-600 focus:outline-none" />
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1" for="order-payment">طريقة الدفع</label>
+                <select id="order-payment" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm focus:border-teal-600 focus:outline-none">
+                  <option value="cash">💵 كاش عند الاستلام</option>
+                  <option value="instapay">📲 إنستا باي (InstaPay)</option>
+                  <option value="wallet">👛 محفظة التطبيق</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1" for="order-notes">ملاحظات إضافية للبواب (اختياري)</label>
+              <input id="order-notes" type="text" placeholder="مثال: رن الجرس مرة واحدة / سيب الطلبات قدام الباب" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm focus:border-teal-600 focus:outline-none" />
+            </div>
+
+            <button type="submit" class="w-full py-3 rounded-xl bg-teal-700 hover:bg-teal-800 text-white font-extrabold text-sm shadow-md transition">
+              🚀 إرسال الطلب لعم عبد السميع الآن
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Right Column: Live Orders Queue & Filters -->
+      <div class="lg:col-span-7 space-y-4">
+        <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm">
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+            <div>
+              <h2 class="text-base sm:text-lg font-extrabold text-slate-900">
+                📋 قائمة الطلبات والمشاوير الجارية
+              </h2>
+              <p class="text-xs text-slate-500">مرتبة تلقائياً حسب الأولوية (المستعجل يظهر أولاً للبواب)</p>
+            </div>
+
+            <!-- Status Filter Pills -->
+            <div class="flex flex-wrap gap-1.5">
+              <button type="button" data-filter="all" class="order-filter-btn px-3 py-1 rounded-lg text-xs font-bold bg-teal-700 text-white">
+                الكل
+              </button>
+              <button type="button" data-filter="pending" class="order-filter-btn px-3 py-1 rounded-lg text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200">
+                قيد الانتظار
+              </button>
+              <button type="button" data-filter="active" class="order-filter-btn px-3 py-1 rounded-lg text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200">
+                جاري التنفيذ
+              </button>
+              <button type="button" data-filter="delivered" class="order-filter-btn px-3 py-1 rounded-lg text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200">
+                المكتملة
+              </button>
+            </div>
+          </div>
+
+          <div id="orders-cards-container" class="space-y-3.5"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 2: WALLET & CUSTODY LEDGER (محفظة الإكراميات وحساب العهدة) -->
+    <section id="tab-view-wallet" class="hidden space-y-6">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm">
+          <div class="text-xs font-bold text-slate-500">رصيد إكراميات ومستحقات البواب</div>
+          <div class="text-3xl font-black text-teal-700 mt-2"><span id="wallet-bawab-balance">465</span> ج.م</div>
+          <p class="text-xs text-slate-500 mt-1">يشمل الإكراميات المحصلة عبر المحفظة وإنستا باي</p>
+        </div>
+        <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm">
+          <div class="text-xs font-bold text-slate-500">فواتير مشتريات قيد التحصيل من السكان</div>
+          <div class="text-3xl font-black text-amber-600 mt-2"><span id="wallet-unpaid-total">425</span> ج.م</div>
+          <p class="text-xs text-slate-500 mt-1">مبالغ دفعها البواب من عهدته وجاري تحصيلها</p>
+        </div>
+        <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm">
+          <div class="text-xs font-bold text-slate-500">صندوق صيانة العمارة الشهري</div>
+          <div class="text-3xl font-black text-emerald-700 mt-2"><span id="wallet-maintenance-total">300</span> ج.م</div>
+          <p class="text-xs text-slate-500 mt-1">اشتراك الصيانة والنظافة والأسانسير (٣٠٠ ج.م / شقة)</p>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div class="lg:col-span-5 bg-white rounded-2xl p-5 border border-slate-200 shadow-sm">
+          <h3 class="text-base font-extrabold text-teal-900 mb-3">💸 تسجيل عملية مالية / إكرامية / سداد صيانة</h3>
+          <form id="wallet-tx-form" class="space-y-3.5">
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1" for="tx-type">نوع العملية المالية</label>
+              <select id="tx-type" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+                <option value="tip">🎁 إكرامية مباشرة لعم عبد السميع</option>
+                <option value="reimbursement">🧾 سداد فاتورة مشتريات للبواب</option>
+                <option value="maintenance_fee">🏢 دفع اشتراك صيانة العمارة الشهري (300 ج.م)</option>
+              </select>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1" for="tx-amount">المبلغ (ج.م)</label>
+                <input id="tx-amount" type="number" min="5" value="50" required class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1" for="tx-method">وسيلة الدفع</label>
+                <select id="tx-method" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+                  <option value="instapay">📲 InstaPay</option>
+                  <option value="wallet">👛 فودافون كاش / محفظة</option>
+                  <option value="cash">💵 كاش يدوي</option>
+                </select>
+              </div>
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1" for="tx-desc">البيان / الملاحظة</label>
+              <input id="tx-desc" type="text" required placeholder="مثال: إكرامية مساعدة في نقل العفش - شقة 12" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+            </div>
+            <button type="submit" class="w-full py-2.5 rounded-xl bg-teal-700 hover:bg-teal-800 text-white font-bold text-sm transition">
+              ✅ تسجيل العملية في الدفتر المالي
+            </button>
+          </form>
+        </div>
+
+        <div class="lg:col-span-7 bg-white rounded-2xl p-5 border border-slate-200 shadow-sm">
+          <h3 class="text-base font-extrabold text-slate-900 mb-3">📒 دفتر المعاملات المالية والعهدة</h3>
+          <div id="wallet-tx-list" class="space-y-2.5"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 3: BUILDING ANNOUNCEMENTS (لوحة إعلانات العمارة) -->
+    <section id="tab-view-announcements" class="hidden grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <div class="lg:col-span-5 bg-white rounded-2xl p-5 border border-slate-200 shadow-sm">
+        <h3 class="text-base font-extrabold text-teal-900 mb-3">📢 نشر تنبيه أو إعلان لسكان العمارة</h3>
+        <form id="announcement-form" class="space-y-3.5">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1" for="ann-title">عنوان التنبيه</label>
+            <input id="ann-title" type="text" required placeholder="مثال: موعد تحصيل فاتورة المياه المشتركة" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1" for="ann-content">تفاصيل الإعلان</label>
+            <textarea id="ann-content" rows="3" required placeholder="اكتب تفاصيل التنبيه ليظهر لجميع الشقق..." class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"></textarea>
+          </div>
+          <label class="flex items-center gap-2 text-xs font-bold text-slate-700 cursor-pointer">
+            <input id="ann-pinned" type="checkbox" class="rounded text-teal-700" checked />
+            <span>📌 تثبيت الإعلان في أعلى اللوحة كتنبيه هام</span>
+          </label>
+          <button type="submit" class="w-full py-2.5 rounded-xl bg-teal-700 hover:bg-teal-800 text-white font-bold text-sm transition">
+            نشر الإعلان لكل السكان
+          </button>
+        </form>
+      </div>
+
+      <div class="lg:col-span-7 bg-white rounded-2xl p-5 border border-slate-200 shadow-sm">
+        <h3 class="text-base font-extrabold text-slate-900 mb-3">📌 الإعلانات والتنبيهات الحالية بالعمارة</h3>
+        <div id="announcements-list" class="space-y-3"></div>
+      </div>
+    </section>
+
+    <!-- TAB 4: REVIEWS & RATINGS (تقييمات عم عبد السميع) -->
+    <section id="tab-view-reviews" class="hidden grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <div class="lg:col-span-5 bg-white rounded-2xl p-5 border border-slate-200 shadow-sm">
+        <h3 class="text-base font-extrabold text-teal-900 mb-3">⭐ أضف تقييمك لخدمة عم عبد السميع</h3>
+        <form id="review-form" class="space-y-3.5">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1" for="rev-rating">التقييم بالنجوم</label>
+            <select id="rev-rating" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+              <option value="5">⭐⭐⭐⭐⭐ (5/5 ممتاز جداً وأمين)</option>
+              <option value="4">⭐⭐⭐⭐ (4/5 جيد جداً وسريع)</option>
+              <option value="3">⭐⭐⭐ (3/5 مقبول)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1" for="rev-comment">كلمة شكر أو ملاحظة</label>
+            <textarea id="rev-comment" rows="3" required placeholder="اكتب رأيك في سرعة وأمانة البواب..." class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"></textarea>
+          </div>
+          <button type="submit" class="w-full py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-extrabold text-sm transition">
+            إرسال التقييم
+          </button>
+        </form>
+      </div>
+
+      <div class="lg:col-span-7 bg-white rounded-2xl p-5 border border-slate-200 shadow-sm">
+        <h3 class="text-base font-extrabold text-slate-900 mb-3">💬 آراء وتقييمات سكان العمارة</h3>
+        <div id="reviews-list" class="space-y-3"></div>
+      </div>
+    </section>
+
+    <!-- TAB 5: RESIDENTS DIRECTORY & ONBOARDING (دليل الشقق وتسجيل ساكن) -->
+    <section id="tab-view-residents" class="hidden grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <div class="lg:col-span-5 bg-white rounded-2xl p-5 border border-slate-200 shadow-sm">
+        <h3 class="text-base font-extrabold text-teal-900 mb-3">🏠 تسجيل ساكن جديد في العمارة</h3>
+        <form id="register-resident-form" class="space-y-3.5">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1" for="reg-name">اسم الساكن بالكامل</label>
+            <input id="reg-name" type="text" required placeholder="مثال: دكتور محمود عبد العزيز" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1" for="reg-phone">رقم الموبايل</label>
+            <input id="reg-phone" type="text" required placeholder="01012345678" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1" for="reg-apt">رقم الشقة</label>
+              <input id="reg-apt" type="text" required placeholder="شقة 15" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1" for="reg-floor">الدور / الطابق</label>
+              <input id="reg-floor" type="number" min="1" max="25" value="5" required class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+            </div>
+          </div>
+          <button type="submit" class="w-full py-2.5 rounded-xl bg-teal-700 hover:bg-teal-800 text-white font-bold text-sm transition">
+            ➕ إضافة الساكن وتفعيل حسابه
+          </button>
+        </form>
+      </div>
+
+      <div class="lg:col-span-7 bg-white rounded-2xl p-5 border border-slate-200 shadow-sm">
+        <h3 class="text-base font-extrabold text-slate-900 mb-3">👥 دليل سكان عمارة النيل الذهبية</h3>
+        <div id="residents-list" class="grid grid-cols-1 sm:grid-cols-2 gap-3"></div>
+      </div>
+    </section>
+
+    <!-- TAB 6: AI BAWAB CHAT (شات المساعد الذكي عم عبد السميع) -->
+    <section id="tab-view-aichat" class="hidden grid grid-cols-1 lg:grid-cols-12 gap-6">
+      
+      <!-- Main Chat Area (8 Columns) -->
+      <div class="lg:col-span-8 flex flex-col bg-white rounded-2xl border border-slate-200 shadow-md overflow-hidden min-h-[640px]">
+        
+        <!-- Chat Header -->
+        <div class="bg-gradient-to-r from-teal-900 via-teal-800 to-slate-900 text-white p-4 flex items-center justify-between border-b border-teal-700/50">
+          <div class="flex items-center gap-3">
+            <div class="relative">
+              <div class="w-12 h-12 rounded-2xl bg-amber-400 text-slate-950 flex items-center justify-center text-2xl font-black shadow-md border-2 border-white/20">
+                🛎️
+              </div>
+              <span class="absolute -bottom-1 -left-1 w-3.5 h-3.5 bg-emerald-400 border-2 border-slate-900 rounded-full pulse-dot"></span>
+            </div>
+            <div>
+              <div class="flex items-center gap-2">
+                <h2 class="text-base sm:text-lg font-black tracking-tight">عم عبد السميع الذكي (مساعد البواب)</h2>
+                <span id="ai-provider-badge" class="bg-emerald-500/20 text-emerald-300 border border-emerald-400/40 text-[11px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1.5">
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 pulse-dot"></span>
+                  متصل وجاهز لخدمتك
+                </span>
+              </div>
+              <p class="text-xs text-teal-200 mt-0.5">
+                مساعد الساكن التفاعلي • يفهم اللهجة المصرية ويستخرج الطلبات والتكاليف فوراً
+              </p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <button id="clear-ai-chat-btn" type="button" class="px-2.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition flex items-center gap-1 border border-white/10" title="مسح المحادثة">
+              🔄 <span>محادثة جديدة</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Quick Prompt Chips -->
+        <div class="bg-slate-50 border-b border-slate-200 px-4 py-2.5 overflow-x-auto flex items-center gap-2 text-xs scrollbar-thin">
+          <span class="text-slate-500 font-bold whitespace-nowrap flex items-center gap-1">💡 تجربة سريعة:</span>
+          <button type="button" class="ai-prompt-chip whitespace-nowrap px-3 py-1.5 rounded-xl bg-white border border-slate-200 hover:border-teal-500 hover:text-teal-700 font-medium text-slate-700 transition shadow-2xs" data-prompt="عم عبد السميع هاتلي ٢ لبن جهينة وكرتونة بيض وعيش سخن بسرعة">
+            🛒 ٢ لبن جهينة وبيض وعيش سخن
+          </button>
+          <button type="button" class="ai-prompt-chip whitespace-nowrap px-3 py-1.5 rounded-xl bg-white border border-slate-200 hover:border-teal-500 hover:text-teal-700 font-medium text-slate-700 transition shadow-2xs" data-prompt="محتاج علبة بنادول إكسترا وشريط أوجمنتين من صيدلية العزبي">
+            💊 بنادول وأوجمنتين من الصيدلية
+          </button>
+          <button type="button" class="ai-prompt-chip whitespace-nowrap px-3 py-1.5 rounded-xl bg-white border border-slate-200 hover:border-teal-500 hover:text-teal-700 font-medium text-slate-700 transition shadow-2xs" data-prompt="عندي تسريب مياه تحت حوض المطبخ ومحتاج سباك ضروري">
+            🔧 تسريب مياه في الحوض
+          </button>
+          <button type="button" class="ai-prompt-chip whitespace-nowrap px-3 py-1.5 rounded-xl bg-white border border-slate-200 hover:border-teal-500 hover:text-teal-700 font-medium text-slate-700 transition shadow-2xs" data-prompt="عربيتي كيا سيراتو في باكية ٤ محتاجة تتغسل بكرة الصبح بدري">
+            🚗 غسيل عربية بالجراج
+          </button>
+        </div>
+
+        <!-- Chat Messages Container -->
+        <div id="ai-chat-messages" class="flex-1 p-4 sm:p-5 overflow-y-auto space-y-4 max-h-[460px] bg-slate-100/60">
+          <!-- Messages will be injected by JavaScript -->
+        </div>
+
+        <!-- Typing Indicator -->
+        <div id="ai-typing-indicator" class="hidden px-5 py-2 text-xs text-teal-800 font-bold flex items-center gap-2 bg-slate-50 border-t border-slate-200">
+          <span class="w-2 h-2 rounded-full bg-teal-600 animate-bounce"></span>
+          <span class="w-2 h-2 rounded-full bg-teal-600 animate-bounce [animation-delay:0.2s]"></span>
+          <span class="w-2 h-2 rounded-full bg-teal-600 animate-bounce [animation-delay:0.4s]"></span>
+          <span>عم عبد السميع بيفكر وبيجهز الرد...</span>
+        </div>
+
+        <!-- Chat Input Form -->
+        <div class="p-3 sm:p-4 bg-white border-t border-slate-200">
+          <form id="ai-chat-form" class="flex items-center gap-2">
+            <button id="ai-voice-btn" type="button" class="p-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition flex items-center justify-center shrink-0 border border-slate-300" title="تسجيل رسالة صوتية بالعامية">
+              🎙️
+            </button>
+            <input
+              id="ai-chat-input"
+              type="text"
+              autocomplete="off"
+              required
+              placeholder="اكتب طلبك بالعامية المصرية (مثال: عم عبد السميع هاتلي ٢ لبن وعيش سخن)..."
+              class="flex-1 rounded-xl border border-slate-300 px-4 py-3 text-sm focus:outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-500/20 shadow-inner"
+            />
+            <button
+              id="ai-send-btn"
+              type="submit"
+              class="px-5 py-3 rounded-xl bg-gradient-to-r from-teal-700 to-emerald-700 hover:from-teal-800 hover:to-emerald-800 text-white font-bold text-sm shadow-md transition flex items-center gap-2 shrink-0 active:scale-95"
+            >
+              <span>إرسال</span>
+              <span>🚀</span>
+            </button>
+          </form>
+          <div class="flex items-center justify-between text-[11px] text-slate-500 mt-2 px-1">
+            <span>💡 يحلل الطلبات باللهجة المصرية ويحدد الأصناف والأسعار تلقائياً</span>
+            <span id="ai-latency-tag" class="font-mono text-teal-700 font-bold">⚡ استجابة فورية</span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Right Column: Bawab AI Assistant Guide & Services (4 Columns) -->
+      <div class="lg:col-span-4 space-y-5">
+        
+        <!-- Concierge Identity Card -->
+        <div class="bg-gradient-to-br from-teal-900 to-slate-900 text-white rounded-2xl p-5 shadow-sm border border-teal-700/60">
+          <div class="flex items-center gap-3 mb-3">
+            <div class="w-12 h-12 rounded-2xl bg-amber-400 text-slate-950 flex items-center justify-center text-2xl font-black shadow-md border-2 border-white/20">
+              🛎️
+            </div>
+            <div>
+              <h3 class="text-base font-extrabold text-white">عم عبد السميع الذكي</h3>
+              <p class="text-xs text-amber-300 font-bold">المساعد الشخصي لسكان العمارة</p>
+            </div>
+          </div>
+          <p class="text-xs text-teal-100/90 leading-relaxed">
+            مساعدك الرقمي في عمارة النيل الذهبية. يخدمك على مدار الساعة لتنظيم طلبات السوبرماركت والمخبز، أدوية الصيدلية، طوارئ السباكة والكهرباء، وتنسيق كافة المشاوير مع بواب العمارة لحظياً.
+          </p>
+          <div class="mt-4 pt-3 border-t border-teal-700/60 flex items-center justify-between text-xs">
+            <span class="flex items-center gap-1.5 text-emerald-300 font-bold">
+              <span class="w-2 h-2 rounded-full bg-emerald-400 pulse-dot"></span>
+              جاهز ومتاح للخدمة
+            </span>
+            <span class="bg-teal-950/70 text-amber-200 text-[11px] font-bold px-2 py-0.5 rounded-lg border border-teal-600/30">
+              عمارة NILE-15
+            </span>
+          </div>
+        </div>
+
+        <!-- Services Guide Card -->
+        <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm">
+          <h3 class="text-sm font-extrabold text-slate-900 mb-3 flex items-center gap-2">
+            <span>📌</span> <span>خدمات يمكنك طلبها بالشات:</span>
+          </h3>
+          <div class="space-y-2.5 text-xs text-slate-700">
+            <div class="flex items-start gap-2.5 p-2 rounded-xl bg-slate-50 border border-slate-100">
+              <span class="text-base">🛒</span>
+              <div>
+                <strong class="text-slate-900 block font-bold">مشتريات السوبرماركت والفرن</strong>
+                <span class="text-slate-500 text-[11px]">عيش سخن، ألبان، بيض، سكر، زيت، خضار</span>
+              </div>
+            </div>
+            <div class="flex items-start gap-2.5 p-2 rounded-xl bg-slate-50 border border-slate-100">
+              <span class="text-base">💊</span>
+              <div>
+                <strong class="text-slate-900 block font-bold">طوارئ الصيدلية والعلاج</strong>
+                <span class="text-slate-500 text-[11px]">مسكنات، أدوية مستعجلة، روشتات عاجلة</span>
+              </div>
+            </div>
+            <div class="flex items-start gap-2.5 p-2 rounded-xl bg-slate-50 border border-slate-100">
+              <span class="text-base">🔧</span>
+              <div>
+                <strong class="text-slate-900 block font-bold">أعطال الصيانة والمنزل</strong>
+                <span class="text-slate-500 text-[11px]">سباكة، تسريب مياه، كهرباء، أنبوبة بوتاجاز</span>
+              </div>
+            </div>
+            <div class="flex items-start gap-2.5 p-2 rounded-xl bg-slate-50 border border-slate-100">
+              <span class="text-base">🚗</span>
+              <div>
+                <strong class="text-slate-900 block font-bold">خدمات الجراج والسيارات</strong>
+                <span class="text-slate-500 text-[11px]">غسيل وتلميع العربية في الباكية صباحاً</span>
+              </div>
+            </div>
+            <div class="flex items-start gap-2.5 p-2 rounded-xl bg-slate-50 border border-slate-100">
+              <span class="text-base">📦</span>
+              <div>
+                <strong class="text-slate-900 block font-bold">استلام وتأمين الطرود</strong>
+                <span class="text-slate-500 text-[11px]">استلام شحنات أمازون ونون في أمانات البوابة</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recent AI Actions Log -->
+        <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm">
+          <h3 class="text-sm font-extrabold text-slate-900 mb-3 flex items-center justify-between">
+            <span>📋 آخر العمليات الذكية المنفذة</span>
+            <span class="text-[10px] text-slate-400 font-normal">Real-time</span>
+          </h3>
+          <div id="ai-recent-actions" class="space-y-2 text-xs">
+            <div class="p-2.5 rounded-xl bg-slate-50 border border-slate-200">
+              <div class="flex items-center justify-between font-bold text-slate-700 mb-0.5">
+                <span>🛒 تحليل طلب بقالة</span>
+                <span class="text-emerald-700 text-[10px]">دقة 98%</span>
+              </div>
+              <p class="text-slate-500 text-[11px]">٢ لبن + بيض + عيش سخن (شقة 12)</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </section>
+
+  </main>
+
+  <script>
+    // =========================================================================
+    // Hybrid State Store (Works seamlessly in Canvas AND with Python FastAPI)
+    // =========================================================================
+    const API_BASE = (window.location.port === "8000" || window.location.host.includes("localhost:8000") || window.location.host.includes("127.0.0.1:8000"))
+      ? `${window.location.origin}/api`
+      : "http://localhost:8000/api";
+
+    const CATEGORY_META = {
+      groceries: { label: "طلبات سوبرماركت وخضار", icon: "🛒" },
+      pharmacy: { label: "صيدلية وأدوية", icon: "💊" },
+      car_wash: { label: "غسيل سيارات", icon: "🚗" },
+      plumbing_electrical: { label: "صيانة (سباكة / كهرباء / غاز)", icon: "🔧" },
+      luggage_help: { label: "حمل شنط وأغراض ثقيلة", icon: "🧳" },
+      cleaning: { label: "تنظيف ومسح سلم/شقة", icon: "🧹" },
+      errand: { label: "مشوار خاص / استلام طرد", icon: "📦" },
+      other: { label: "خدمة أخرى", icon: "✨" }
+    };
+
+    const STATUS_META = {
+      pending: { label: "قيد الانتظار", badgeClass: "bg-amber-100 text-amber-800 border-amber-300" },
+      accepted: { label: "تم القبول من البواب", badgeClass: "bg-sky-100 text-sky-800 border-sky-300" },
+      in_progress: { label: "جاري الشراء / التنفيذ", badgeClass: "bg-indigo-100 text-indigo-800 border-indigo-300" },
+      delivered: { label: "تم التوصيل لباب الشقة ✅", badgeClass: "bg-emerald-100 text-emerald-800 border-emerald-300" },
+      cancelled: { label: "ملغي", badgeClass: "bg-rose-100 text-rose-800 border-rose-300" }
+    };
+
+    const QUICK_TEMPLATES = {
+      bread: {
+        category: "groceries",
+        urgency: "urgent",
+        title: "عيش بلدي سخن ولبن للفطار",
+        details: "١٠ أرغفة عيش بلدي سخن من الفرن + ٢ لبن جهينة كامل الدسم + علبة جبنة فيتا",
+        estCost: 95,
+        tip: 15,
+        notes: "يا ريت العيش يكون طازة يا عم عبد السميع"
+      },
+      gas: {
+        category: "plumbing_electrical",
+        urgency: "urgent",
+        title: "تغيير أنبوبة البوتاجاز وفحص المنظم",
+        details: "الأنبوبة خلصت ومحتاجين تغييرها والتأكد من جلدة المنظم بالمرة",
+        estCost: 150,
+        tip: 35,
+        notes: "رن الجرس مرة واحدة"
+      },
+      car: {
+        category: "car_wash",
+        urgency: "scheduled",
+        title: "غسيل العربية وتلميع الزجاج قبل ٨:٣٠ ص",
+        details: "غسيل خارجي ومسح التابلوه - العربية راكنة قدام البوابة الرئيسية",
+        estCost: 0,
+        tip: 50,
+        notes: "المفتاح موجود في الأمانات"
+      },
+      pharmacy: {
+        category: "pharmacy",
+        urgency: "urgent",
+        title: "أدوية مستعجلة من صيدلية العزبي",
+        details: "علبة بنادول إكسترا + فيتامين سي فوار + خافض حرارة",
+        estCost: 130,
+        tip: 25,
+        notes: "هات فاتورة الصيدلية مع الدواء"
+      },
+      luggage: {
+        category: "luggage_help",
+        urgency: "normal",
+        title: "مساعدة في تنزيل ٣ شنط سفر للعربية",
+        details: "مسافرين ومحتاجين مساعدة في تنزيل الشنط من الشقة لشنطة العربية",
+        estCost: 0,
+        tip: 40,
+        notes: "الأسانسير شغال"
+      }
+    };
+
+    const state = {
+      currentRole: "resident", // 'resident' or 'bawab'
+      activeUserId: 2,
+      orderFilter: "all",
+      bawabAvailable: true,
+      bawabWallet: 465,
+      maintenanceFund: 300,
+      users: [
+        { id: 1, full_name: "عم عبد السميع (البيه البواب)", phone: "01000000001", role: "bawab", apartment_number: "غرفة الحارس - الأرضي", floor_number: 0 },
+        { id: 2, full_name: "أستاذ أحمد زكي", phone: "01000000002", role: "resident", apartment_number: "شقة 12", floor_number: 4 },
+        { id: 3, full_name: "مدام سعاد", phone: "01000000003", role: "resident", apartment_number: "شقة 20", floor_number: 7 },
+        { id: 4, full_name: "مهندس طارق علام", phone: "01000000004", role: "resident", apartment_number: "شقة 5", floor_number: 2 }
+      ],
+      orders: [
+        {
+          id: 101,
+          resident_id: 2,
+          resident_name: "أستاذ أحمد زكي",
+          resident_apartment: "شقة 12",
+          resident_floor: 4,
+          category: "groceries",
+          title: "طلبات سوبرماركت ومخبز",
+          details: "٢ لبن جهينة كامل الدسم + عيش بلدي سخن + كرتونة بيض أحمر",
+          urgency: "urgent",
+          status: "in_progress",
+          estimated_items_cost: 210,
+          actual_items_cost: 215,
+          service_tip: 25,
+          payment_method: "instapay",
+          is_paid: false,
+          notes: "هات العيش طازة من فرن التحرير",
+          created_at: "منذ ١٢ دقيقة"
+        },
+        {
+          id: 102,
+          resident_id: 3,
+          resident_name: "مدام سعاد",
+          resident_apartment: "شقة 20",
+          resident_floor: 7,
+          category: "plumbing_electrical",
+          title: "تغيير أنبوبة البوتاجاز وفحص المنظم",
+          details: "محتاجين تغيير الأنبوبة والتأكد من جلدة المنظم في المطبخ",
+          urgency: "urgent",
+          status: "pending",
+          estimated_items_cost: 150,
+          actual_items_cost: 0,
+          service_tip: 35,
+          payment_method: "cash",
+          is_paid: false,
+          notes: "رن الجرس مرة واحدة",
+          created_at: "منذ ٥ دقائق"
+        },
+        {
+          id: 103,
+          resident_id: 2,
+          resident_name: "أستاذ أحمد زكي",
+          resident_apartment: "شقة 12",
+          resident_floor: 4,
+          category: "car_wash",
+          title: "غسيل العربية قبل الساعة ٩ الصبح",
+          details: "العربية راكنة قدام البوابة الرئيسية - كيا سيراتو فضي",
+          urgency: "scheduled",
+          status: "accepted",
+          estimated_items_cost: 0,
+          actual_items_cost: 0,
+          service_tip: 50,
+          payment_method: "wallet",
+          is_paid: true,
+          notes: "المفتاح معاك في الأمانات",
+          created_at: "اليوم ٠٧:٣٠ ص"
+        },
+        {
+          id: 104,
+          resident_id: 4,
+          resident_name: "مهندس طارق علام",
+          resident_apartment: "شقة 5",
+          resident_floor: 2,
+          category: "pharmacy",
+          title: "أدوية من صيدلية العزبي",
+          details: "علبة بنادول إكسترا + فيتامين سي فوار + قطرة عين",
+          urgency: "normal",
+          status: "delivered",
+          estimated_items_cost: 145,
+          actual_items_cost: 140,
+          service_tip: 20,
+          payment_method: "instapay",
+          is_paid: true,
+          notes: "تم التسليم عند الباب",
+          created_at: "أمس ٠٩:١٥ م"
+        }
+      ],
+      transactions: [
+        { id: 1, tx_type: "reimbursement", amount: 140, payment_method: "instapay", description: "سداد فاتورة صيدلية العزبي - شقة 5", user_name: "مهندس طارق علام", created_at: "أمس ٠٩:٢٠ م" },
+        { id: 2, tx_type: "tip", amount: 20, payment_method: "instapay", description: "إكرامية توصيل طلب صيدلية - شقة 5", user_name: "مهندس طارق علام", created_at: "أمس ٠٩:٢٠ م" },
+        { id: 3, tx_type: "maintenance_fee", amount: 300, payment_method: "cash", description: "سداد اشتراك صيانة العمارة الشهري - شقة 12", user_name: "أستاذ أحمد زكي", created_at: "منذ يومين" }
+      ],
+      announcements: [
+        { id: 1, title: "تنبيه هام: صيانة الأسانسير غداً الثلاثاء", content: "سيتم إيقاف الأسانسير غداً من الساعة ١٠ صباحاً حتى ١٢ ظهراً للصيانة الدورية. لو حد محتاج طلبات تقيلة يبلغ عم عبد السميع بدري.", author_name: "عم عبد السميع (البيه البواب)", is_pinned: true, created_at: "اليوم ٠٨:٠٠ ص" },
+        { id: 2, title: "موعد غسيل وتعقيم خزان المياه العلوي", content: "يوم الجمعة القادم الساعة ٨ صباحاً سيتم تنظيف وتعقيم خزان المياه بالتعاون مع شركة متخصصة.", author_name: "إدارة العمارة", is_pinned: false, created_at: "أمس" }
+      ],
+      reviews: [
+        { id: 1, resident_name: "مهندس طارق علام (شقة 5)", rating: 5, comment: "تسلم إيدك يا عم عبد السميع، جبت الدواء في أقل من ربع ساعة!", created_at: "أمس" },
+        { id: 2, resident_name: "أستاذ أحمد زكي (شقة 12)", rating: 5, comment: "راجل أمين ومواعيده مظبوطة في غسيل العربية وطلبات البيت.", created_at: "منذ ٣ أيام" }
+      ]
+    };
+
+    function showToast(title, subtitle = "") {
+      const container = document.getElementById("toast-container");
+      const toast = document.createElement("div");
+      toast.className = "pointer-events-auto bg-slate-900 text-white px-4 py-3 rounded-2xl shadow-xl border border-teal-500/40 flex items-start gap-3 transition";
+      toast.innerHTML = `
+        <div class="text-xl">🔔</div>
+        <div class="flex-1">
+          <div class="text-xs font-extrabold text-teal-300">${title}</div>
+          ${subtitle ? `<div class="text-xs text-slate-200 mt-0.5">${subtitle}</div>` : ""}
+        </div>
+      `;
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.remove();
+      }, 3600);
+    }
+
+    function getActiveUser() {
+      return state.users.find(u => u.id === Number(state.activeUserId)) || state.users[1];
+    }
+
+    function updateKPIs() {
+      const total = state.orders.length;
+      const pending = state.orders.filter(o => o.status === "pending").length;
+      const active = state.orders.filter(o => o.status === "accepted" || o.status === "in_progress").length;
+      const delivered = state.orders.filter(o => o.status === "delivered").length;
+
+      const unpaidCustody = state.orders
+        .filter(o => o.status !== "cancelled" && !o.is_paid)
+        .reduce((acc, o) => acc + ((o.actual_items_cost > 0 ? o.actual_items_cost : o.estimated_items_cost) + o.service_tip), 0);
+
+      const avgRating = state.reviews.length
+        ? (state.reviews.reduce((a, r) => a + r.rating, 0) / state.reviews.length).toFixed(1)
+        : "5.0";
+
+      document.getElementById("kpi-total").textContent = total;
+      document.getElementById("kpi-pending").textContent = pending;
+      document.getElementById("kpi-active").textContent = active;
+      document.getElementById("kpi-delivered").textContent = delivered;
+      document.getElementById("kpi-bawab-wallet").textContent = state.bawabWallet;
+      document.getElementById("kpi-bawab-rating").textContent = avgRating;
+      document.getElementById("nav-rating-avg").textContent = avgRating;
+      document.getElementById("nav-ann-count").textContent = state.announcements.length;
+
+      document.getElementById("bawab-unpaid-custody").textContent = unpaidCustody;
+      document.getElementById("wallet-bawab-balance").textContent = state.bawabWallet;
+      document.getElementById("wallet-unpaid-total").textContent = unpaidCustody;
+      document.getElementById("wallet-maintenance-total").textContent = state.maintenanceFund;
+
+      const user = getActiveUser();
+      document.getElementById("form-resident-badge").textContent = user.apartment_number || user.full_name;
+    }
+
+    function renderOrders() {
+      const container = document.getElementById("orders-cards-container");
+      let list = [...state.orders];
+
+      if (state.orderFilter === "pending") {
+        list = list.filter(o => o.status === "pending");
+      } else if (state.orderFilter === "active") {
+        list = list.filter(o => o.status === "accepted" || o.status === "in_progress");
+      } else if (state.orderFilter === "delivered") {
+        list = list.filter(o => o.status === "delivered");
+      }
+
+      // Sort urgent first
+      list.sort((a, b) => (a.urgency === "urgent" ? -1 : 1));
+
+      if (!list.length) {
+        container.innerHTML = `
+          <div class="text-center py-10 text-slate-400 text-sm">
+            لا توجد طلبات في هذا التصنيف حالياً.
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = list.map(order => {
+        const cat = CATEGORY_META[order.category] || CATEGORY_META.other;
+        const st = STATUS_META[order.status] || STATUS_META.pending;
+        const itemCost = order.actual_items_cost > 0 ? order.actual_items_cost : order.estimated_items_cost;
+        const totalDue = itemCost + order.service_tip;
+
+        return `
+          <div class="rounded-2xl border ${order.urgency === 'urgent' && order.status !== 'delivered' ? 'border-rose-300 bg-rose-50/20' : 'border-slate-200 bg-white'} p-4 shadow-sm transition">
+            <div class="flex flex-wrap items-start justify-between gap-2 mb-2">
+              <div class="flex items-center gap-2">
+                <span class="text-2xl">${cat.icon}</span>
+                <div>
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <h3 class="font-extrabold text-slate-900 text-sm sm:text-base">${order.title}</h3>
+                    ${order.urgency === "urgent" ? `<span class="bg-rose-100 text-rose-700 border border-rose-300 text-xs font-extrabold px-2 py-0.5 rounded-full">🔥 مستعجل</span>` : ""}
+                    ${order.urgency === "scheduled" ? `<span class="bg-amber-100 text-amber-800 text-xs font-bold px-2 py-0.5 rounded-full">⏰ بموعد</span>` : ""}
+                  </div>
+                  <div class="text-xs text-slate-500 font-semibold">
+                    ${order.resident_name} (${order.resident_apartment}) • ${order.created_at}
+                  </div>
+                </div>
+              </div>
+              <span class="text-xs font-extrabold px-2.5 py-1 rounded-full border ${st.badgeClass}">
+                ${st.label}
+              </span>
+            </div>
+
+            <p class="text-xs sm:text-sm text-slate-700 bg-slate-50 rounded-xl p-3 border border-slate-200/70 mb-3">
+              ${order.details}
+              ${order.notes ? `<span class="block text-xs text-teal-800 font-semibold mt-1">💡 ملاحظة: ${order.notes}</span>` : ""}
+            </p>
+
+            <div class="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-100 text-xs">
+              <div class="flex flex-wrap items-center gap-3">
+                <span>المشتريات: <strong>${itemCost} ج.م</strong></span>
+                <span>الإكرامية: <strong class="text-teal-700">${order.service_tip} ج.م</strong></span>
+                <span>الإجمالي: <strong class="text-slate-900 text-sm">${totalDue} ج.م</strong></span>
+                <span class="px-2 py-0.5 rounded-md font-bold ${order.is_paid ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">
+                  ${order.is_paid ? '✓ خالص الدفع' : '⏳ غير مسدد'}
+                </span>
+              </div>
+
+              <div class="flex flex-wrap items-center gap-1.5">
+                ${order.status === "pending" ? `
+                  <button type="button" data-action="accept" data-id="${order.id}" class="order-action-btn px-3 py-1.5 rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-bold transition">
+                    👍 قبول الطلب
+                  </button>
+                ` : ""}
+                ${order.status === "accepted" ? `
+                  <button type="button" data-action="progress" data-id="${order.id}" class="order-action-btn px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold transition">
+                    🛒 جاري الشراء الآن
+                  </button>
+                ` : ""}
+                ${(order.status === "accepted" || order.status === "in_progress") ? `
+                  <button type="button" data-action="deliver" data-id="${order.id}" class="order-action-btn px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold transition">
+                    ✅ تم التوصيل لباب الشقة
+                  </button>
+                ` : ""}
+                ${!order.is_paid && order.status !== "cancelled" ? `
+                  <button type="button" data-action="mark-paid" data-id="${order.id}" class="order-action-btn px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold transition">
+                    💳 تسديد الحساب (${totalDue} ج.م)
+                  </button>
+                ` : ""}
+              </div>
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function renderWalletTransactions() {
+      const listEl = document.getElementById("wallet-tx-list");
+      listEl.innerHTML = state.transactions.map(tx => {
+        const badgeColor = tx.tx_type === "tip"
+          ? "bg-amber-100 text-amber-800"
+          : tx.tx_type === "maintenance_fee"
+          ? "bg-emerald-100 text-emerald-800"
+          : "bg-sky-100 text-sky-800";
+        const typeLabel = tx.tx_type === "tip" ? "🎁 إكرامية" : tx.tx_type === "maintenance_fee" ? "🏢 صيانة عمارة" : "🧾 سداد فاتورة";
+        return `
+          <div class="flex items-center justify-between p-3 rounded-xl border border-slate-200 bg-slate-50/60">
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="text-xs font-bold px-2 py-0.5 rounded-md ${badgeColor}">${typeLabel}</span>
+                <strong class="text-xs sm:text-sm text-slate-900">${tx.description}</strong>
+              </div>
+              <div class="text-xs text-slate-500 mt-0.5">${tx.user_name} • وسيلة الدفع: ${tx.payment_method} • ${tx.created_at}</div>
+            </div>
+            <div class="text-sm sm:text-base font-black text-teal-700">+${tx.amount} ج.م</div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function renderAnnouncements() {
+      const listEl = document.getElementById("announcements-list");
+      listEl.innerHTML = state.announcements.map(a => `
+        <div class="p-4 rounded-2xl border ${a.is_pinned ? 'border-amber-300 bg-amber-50/40' : 'border-slate-200 bg-white'}">
+          <div class="flex items-center justify-between mb-1">
+            <h4 class="font-extrabold text-slate-900 text-sm sm:text-base">
+              ${a.is_pinned ? '📌 ' : ''}${a.title}
+            </h4>
+            <span class="text-xs text-slate-400">${a.created_at}</span>
+          </div>
+          <p class="text-xs sm:text-sm text-slate-700 mb-2">${a.content}</p>
+          <div class="text-xs font-bold text-teal-800">بواسطة: ${a.author_name}</div>
+        </div>
+      `).join("");
+    }
+
+    function renderReviews() {
+      const listEl = document.getElementById("reviews-list");
+      listEl.innerHTML = state.reviews.map(r => `
+        <div class="p-4 rounded-2xl border border-slate-200 bg-slate-50/50">
+          <div class="flex items-center justify-between mb-1">
+            <strong class="text-sm text-slate-900">${r.resident_name}</strong>
+            <span class="text-amber-500 font-bold text-xs">${"⭐".repeat(r.rating)} (${r.rating}/5)</span>
+          </div>
+          <p class="text-xs sm:text-sm text-slate-700">${r.comment}</p>
+          <div class="text-xs text-slate-400 mt-1">${r.created_at}</div>
+        </div>
+      `).join("");
+    }
+
+    function renderResidents() {
+      const listEl = document.getElementById("residents-list");
+      listEl.innerHTML = state.users.map(u => `
+        <div class="p-3.5 rounded-2xl border border-slate-200 bg-slate-50/50 flex items-center justify-between">
+          <div>
+            <div class="font-extrabold text-sm text-slate-900">${u.full_name}</div>
+            <div class="text-xs text-slate-500">${u.apartment_number || 'العمارة'} • الدور ${u.floor_number ?? 0}</div>
+            <div class="text-xs text-teal-700 font-semibold mt-0.5" dir="ltr">${u.phone}</div>
+          </div>
+          <span class="text-xs font-bold px-2.5 py-1 rounded-full ${u.role === 'bawab' ? 'bg-amber-100 text-amber-900' : 'bg-teal-100 text-teal-800'}">
+            ${u.role === 'bawab' ? '🛎️ البواب' : '🏠 ساكن'}
+          </span>
+        </div>
+      `).join("");
+
+      const selectEl = document.getElementById("active-user-select");
+      const currentVal = selectEl.value;
+      selectEl.innerHTML = state.users.map(u => `
+        <option value="${u.id}">${u.full_name} (${u.apartment_number || 'البواب'})</option>
+      `).join("");
+      selectEl.value = currentVal;
+    }
+
+    function renderAll() {
+      updateKPIs();
+      renderOrders();
+      renderWalletTransactions();
+      renderAnnouncements();
+      renderReviews();
+      renderResidents();
+    }
+
+    // =========================================================================
+    // Event Listeners
+    // =========================================================================
+
+    // Navigation Tabs
+    document.querySelectorAll(".nav-tab-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const targetTab = btn.dataset.tab;
+        document.querySelectorAll(".nav-tab-btn").forEach(b => b.classList.remove("tab-active"));
+        btn.classList.add("tab-active");
+
+        ["orders", "wallet", "announcements", "reviews", "residents", "aichat"].forEach(tab => {
+          const el = document.getElementById(`tab-view-${tab}`);
+          if (el) {
+            if (tab === targetTab) {
+              el.classList.remove("hidden");
+            } else {
+              el.classList.add("hidden");
+            }
+          }
+        });
+
+        if (targetTab === "aichat") {
+          renderAiChat();
+        }
+      });
+    });
+
+    // Role Switcher
+    document.getElementById("switch-resident-btn").addEventListener("click", () => {
+      state.currentRole = "resident";
+      document.getElementById("switch-resident-btn").classList.add("role-pill-active");
+      document.getElementById("switch-bawab-btn").classList.remove("role-pill-active");
+      document.getElementById("bawab-control-card").classList.add("hidden");
+
+      // Show AI Chat tab and floating button for Resident ("البيه")
+      const aiTabBtn = document.querySelector('button[data-tab="aichat"]');
+      if (aiTabBtn) aiTabBtn.classList.remove("hidden");
+      const floatingBtn = document.getElementById("floating-ai-btn");
+      if (floatingBtn) floatingBtn.classList.remove("hidden");
+
+      showToast("تم التبديل إلى واجهة البيه (الساكن) 👤", "يمكنك الآن التحدث مع المساعد الذكي وإرسال الطلبات.");
+    });
+
+    document.getElementById("switch-bawab-btn").addEventListener("click", () => {
+      state.currentRole = "bawab";
+      document.getElementById("switch-bawab-btn").classList.add("role-pill-active");
+      document.getElementById("switch-resident-btn").classList.remove("role-pill-active");
+      document.getElementById("bawab-control-card").classList.remove("hidden");
+
+      // Hide AI Chat from Bawab because the chat is for the resident (البيه)
+      const aiTabBtn = document.querySelector('button[data-tab="aichat"]');
+      if (aiTabBtn) aiTabBtn.classList.add("hidden");
+      const floatingBtn = document.getElementById("floating-ai-btn");
+      if (floatingBtn) floatingBtn.classList.add("hidden");
+
+      // If active tab was aichat, switch back to orders
+      const currentActiveTab = document.querySelector(".nav-tab-btn.tab-active");
+      if (currentActiveTab && currentActiveTab.dataset.tab === "aichat") {
+        document.querySelector('button[data-tab="orders"]').click();
+      }
+
+      showToast("مرحباً يا عم عبد السميع 🛎️", "لوحة تحكم البواب مفعلة لاستلام وإدارة الطلبات.");
+    });
+
+    // Active User Select
+    document.getElementById("active-user-select").addEventListener("change", (e) => {
+      state.activeUserId = Number(e.target.value);
+      const user = getActiveUser();
+      if (user.role === "bawab") {
+        document.getElementById("switch-bawab-btn").click();
+      } else {
+        document.getElementById("switch-resident-btn").click();
+      }
+      updateKPIs();
+    });
+
+    // Bawab Availability Toggle
+    document.getElementById("toggle-availability-btn").addEventListener("click", () => {
+      state.bawabAvailable = !state.bawabAvailable;
+      const dot = document.getElementById("bawab-status-dot");
+      const txt = document.getElementById("bawab-status-text");
+      const btn = document.getElementById("toggle-availability-btn");
+
+      if (state.bawabAvailable) {
+        dot.className = "w-2.5 h-2.5 rounded-full bg-emerald-400 pulse-dot";
+        txt.textContent = "متاح الآن بالعمارة";
+        txt.className = "text-emerald-200";
+        btn.textContent = "تغيير الحالة: متاح الآن";
+        showToast("عم عبد السميع متاح الآن 🟢", "يمكن للسكان إرسال الطلبات الفورية.");
+      } else {
+        dot.className = "w-2.5 h-2.5 rounded-full bg-amber-400";
+        txt.textContent = "في مشوار خارج العمارة";
+        txt.className = "text-amber-200";
+        btn.textContent = "تغيير الحالة: خارج العمارة";
+        showToast("عم عبد السميع في مشوار حالياً 🛵", "سيتم جدولة الطلبات الجديدة لحين عودته.");
+      }
+    });
+
+    // Quick Order Templates
+    document.querySelectorAll(".quick-template-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const tpl = QUICK_TEMPLATES[btn.dataset.template];
+        if (!tpl) return;
+        document.getElementById("order-category").value = tpl.category;
+        document.getElementById("order-urgency").value = tpl.urgency;
+        document.getElementById("order-title").value = tpl.title;
+        document.getElementById("order-details").value = tpl.details;
+        document.getElementById("order-est-cost").value = tpl.estCost;
+        document.getElementById("order-tip").value = tpl.tip;
+        document.getElementById("order-notes").value = tpl.notes;
+        showToast("تم ملء القالب السريع ✨", "راجع البيانات واضغط إرسال الطلب.");
+      });
+    });
+
+    // Filter Buttons
+    document.querySelectorAll(".order-filter-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        state.orderFilter = btn.dataset.filter;
+        document.querySelectorAll(".order-filter-btn").forEach(b => {
+          b.className = "order-filter-btn px-3 py-1 rounded-lg text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200";
+        });
+        btn.className = "order-filter-btn px-3 py-1 rounded-lg text-xs font-bold bg-teal-700 text-white";
+        renderOrders();
+      });
+    });
+
+    // Create Order Form Submit
+    document.getElementById("create-order-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const user = getActiveUser();
+      const newOrder = {
+        id: Date.now(),
+        building_id: 1,
+        resident_id: user.role === "bawab" ? 2 : user.id,
+        resident_name: user.role === "bawab" ? "أستاذ أحمد زكي" : user.full_name,
+        resident_apartment: user.role === "bawab" ? "شقة 12" : (user.apartment_number || "شقة 12"),
+        resident_floor: user.floor_number || 4,
+        category: document.getElementById("order-category").value,
+        urgency: document.getElementById("order-urgency").value,
+        title: document.getElementById("order-title").value.trim(),
+        details: document.getElementById("order-details").value.trim(),
+        estimated_items_cost: Number(document.getElementById("order-est-cost").value || 0),
+        actual_items_cost: 0,
+        service_tip: Number(document.getElementById("order-tip").value || 15),
+        payment_method: document.getElementById("order-payment").value,
+        is_paid: false,
+        notes: document.getElementById("order-notes").value.trim(),
+        status: "pending",
+        created_at: "الآن"
+      };
+
+      state.orders.unshift(newOrder);
+      e.target.reset();
+      document.getElementById("order-est-cost").value = 100;
+      document.getElementById("order-tip").value = 20;
+      renderAll();
+      showToast("تم إرسال الطلب لعم عبد السميع بنجاح 🚀", `${newOrder.title} (${newOrder.resident_apartment})`);
+
+      // Try syncing with backend if running
+      try {
+        await fetch("http://localhost:8000/api/orders", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(newOrder)
+        });
+      } catch (_) {}
+    });
+
+    // Order Card Action Buttons (Delegated)
+    document.getElementById("orders-cards-container").addEventListener("click", async (e) => {
+      const btn = e.target.closest(".order-action-btn");
+      if (!btn) return;
+      const orderId = Number(btn.dataset.id);
+      const action = btn.dataset.action;
+      const order = state.orders.find(o => o.id === orderId);
+      if (!order) return;
+
+      if (action === "accept") {
+        order.status = "accepted";
+        showToast("قام عم عبد السميع بقبول الطلب 👍", order.title);
+      } else if (action === "progress") {
+        order.status = "in_progress";
+        showToast("جاري شراء وتنفيذ الطلب الآن 🛒", order.title);
+      } else if (action === "deliver") {
+        order.status = "delivered";
+        if (order.actual_items_cost === 0 && order.estimated_items_cost > 0) {
+          order.actual_items_cost = order.estimated_items_cost;
+        }
+        state.bawabWallet += order.service_tip;
+        state.transactions.unshift({
+          id: Date.now(),
+          tx_type: "tip",
+          amount: order.service_tip,
+          payment_method: order.payment_method,
+          description: `إكرامية توصيل: ${order.title}`,
+          user_name: order.resident_name,
+          created_at: "الآن"
+        });
+        showToast("تم توصيل الطلب لباب الشقة ✅", `أضيفت إكرامية ${order.service_tip} ج.م لمحفظة البواب.`);
+      } else if (action === "mark-paid") {
+        order.is_paid = true;
+        const cost = (order.actual_items_cost > 0 ? order.actual_items_cost : order.estimated_items_cost);
+        if (cost > 0) {
+          state.transactions.unshift({
+            id: Date.now(),
+            tx_type: "reimbursement",
+            amount: cost,
+            payment_method: order.payment_method,
+            description: `سداد فاتورة مشتريات: ${order.title}`,
+            user_name: order.resident_name,
+            created_at: "الآن"
+          });
+        }
+        showToast("تم تسديد حساب الطلب بالكامل 💳", order.title);
+      }
+
+      renderAll();
+    });
+
+    // Wallet Transaction Form
+    document.getElementById("wallet-tx-form").addEventListener("submit", (e) => {
+      e.preventDefault();
+      const user = getActiveUser();
+      const txType = document.getElementById("tx-type").value;
+      const amount = Number(document.getElementById("tx-amount").value || 0);
+      const method = document.getElementById("tx-method").value;
+      const desc = document.getElementById("tx-desc").value.trim();
+
+      state.transactions.unshift({
+        id: Date.now(),
+        tx_type: txType,
+        amount,
+        payment_method: method,
+        description: desc,
+        user_name: user.full_name,
+        created_at: "الآن"
+      });
+
+      if (txType === "tip" || txType === "reimbursement") {
+        state.bawabWallet += amount;
+      } else if (txType === "maintenance_fee") {
+        state.maintenanceFund += amount;
+      }
+
+      e.target.reset();
+      document.getElementById("tx-amount").value = 50;
+      renderAll();
+      showToast("تم تسجيل العملية المالية بنجاح 💰", `${desc} (${amount} ج.م)`);
+    });
+
+    // Announcement Form
+    document.getElementById("announcement-form").addEventListener("submit", (e) => {
+      e.preventDefault();
+      const user = getActiveUser();
+      const title = document.getElementById("ann-title").value.trim();
+      const content = document.getElementById("ann-content").value.trim();
+      const isPinned = document.getElementById("ann-pinned").checked;
+
+      state.announcements.unshift({
+        id: Date.now(),
+        title,
+        content,
+        author_name: user.full_name,
+        is_pinned: isPinned,
+        created_at: "الآن"
+      });
+
+      e.target.reset();
+      renderAll();
+      showToast("تم نشر الإعلان لسكان العمارة 📢", title);
+    });
+
+    // Review Form
+    document.getElementById("review-form").addEventListener("submit", (e) => {
+      e.preventDefault();
+      const user = getActiveUser();
+      const rating = Number(document.getElementById("rev-rating").value || 5);
+      const comment = document.getElementById("rev-comment").value.trim();
+
+      state.reviews.unshift({
+        id: Date.now(),
+        resident_name: `${user.full_name} (${user.apartment_number || 'ساكن'})`,
+        rating,
+        comment,
+        created_at: "الآن"
+      });
+
+      e.target.reset();
+      renderAll();
+      showToast("شكراً لتقييمك لعم عبد السميع ⭐", "تم تحديث التقييم العام للبواب.");
+    });
+
+    // Register Resident Form
+    document.getElementById("register-resident-form").addEventListener("submit", (e) => {
+      e.preventDefault();
+      const name = document.getElementById("reg-name").value.trim();
+      const phone = document.getElementById("reg-phone").value.trim();
+      const apt = document.getElementById("reg-apt").value.trim();
+      const floor = Number(document.getElementById("reg-floor").value || 1);
+
+      const newUser = {
+        id: Date.now(),
+        full_name: name,
+        phone,
+        role: "resident",
+        apartment_number: apt,
+        floor_number: floor
+      };
+
+      state.users.push(newUser);
+      e.target.reset();
+      renderAll();
+      showToast("تم تسجيل الساكن الجديد بنجاح 🏠", `${name} (${apt})`);
+    });
+
+    // =========================================================================
+    // AI Chat & Groq Assistant Module
+    // =========================================================================
+    state.aiChatMessages = [
+      {
+        role: "assistant",
+        text: "يا مرحب يا باشا! أنا عم عبد السميع، بواب عمارة النيل الذهبية ومساعدك الذكي. اؤمرني بأي طلب من السوبرماركت، عيش سخن من الفرن، أدوية من الصيدلية، سباكة، أو غسيل عربية. اكتب بالعامية براحتك وهفهمك وأطلعلك التكلفة والطلب فوراً! 🛎️✨",
+        time: "الآن",
+        data: null
+      }
+    ];
+
+    function clientSideEgyptianHeuristics(prompt) {
+      const clean = (prompt || "").trim();
+      const lower = clean.toLowerCase();
+
+      // استخراج أي ميزانية محددة بالجنيه (مثال: بـ 10 جنيه، ب 10، ب15 جنيه)
+      const budgetMatch = clean.match(/ب(?:ـ|\s*)?(\d+)(?:\s*جنيه|\s*ج\.م)?/);
+      const customBudget = budgetMatch ? parseInt(budgetMatch[1], 10) : null;
+
+      const items = [];
+      let totalCost = 0;
+      let category = "groceries";
+      let urgency = (lower.includes("بسرعة") || lower.includes("ضروري") || lower.includes("طوارئ") || lower.includes("سخن") || lower.includes("حالاً")) ? "urgent" : "normal";
+
+      if (clean.includes("لبن") || clean.includes("حليب")) {
+        const qty = (clean.includes("٢") || clean.includes("2") || clean.includes("اتنين")) ? "٢" : "١";
+        const price = customBudget || (qty === "٢" ? 84 : 42);
+        items.push({ name: "لبن جهينة ١ لتر", quantity: qty, estimated_price_egp: price, category: "groceries" });
+        totalCost += price;
+      }
+      if (clean.includes("بيض")) {
+        const price = customBudget || 165;
+        items.push({ name: "طبق بيض (٣٠ بيضة)", quantity: "١", estimated_price_egp: price, category: "groceries" });
+        totalCost += price;
+      }
+      if (clean.includes("عيش") || clean.includes("خبز")) {
+        const price = customBudget || 20;
+        const qtyDesc = customBudget ? `بقيمة ${customBudget} جنيه` : "١٠ رغيف سخن";
+        items.push({ name: "عيش بلدي سخن من الفرن", quantity: qtyDesc, estimated_price_egp: price, category: "groceries" });
+        totalCost += price;
+      }
+      if (clean.includes("سكر")) {
+        const price = customBudget || 36;
+        items.push({ name: "كيلو سكر أبيض", quantity: "١", estimated_price_egp: price, category: "groceries" });
+        totalCost += price;
+      }
+      if (clean.includes("بنادول") || clean.includes("دواء") || clean.includes("صيدلية") || clean.includes("أوجمنتين") || clean.includes("مسكن")) {
+        category = "pharmacy";
+        urgency = "urgent";
+        const price = customBudget || 95;
+        items.push({ name: "أدوية ومستلزمات صيدلية", quantity: "١", estimated_price_egp: price, category: "pharmacy" });
+        totalCost += price;
+      }
+      if (clean.includes("سباك") || clean.includes("تسريب") || clean.includes("حنفية") || clean.includes("حوض")) {
+        category = "plumbing_electrical";
+        urgency = "urgent";
+        const price = customBudget || 120;
+        items.push({ name: "مستلزمات صيانة سباكة ومحبس", quantity: "١", estimated_price_egp: price, category: "plumbing_electrical" });
+        totalCost += price;
+      }
+      if (clean.includes("عربية") || clean.includes("غسيل") || clean.includes("سيارة")) {
+        category = "car_wash";
+        const price = customBudget || 60;
+        items.push({ name: "غسيل وتلميع سيارة بالجراج", quantity: "١", estimated_price_egp: price, category: "car_wash" });
+        totalCost += price;
+      }
+
+      if (items.length === 0) {
+        const price = customBudget || 50;
+        items.push({ name: clean.slice(0, 35) || "مشوار عام", quantity: "١", estimated_price_egp: price, category: "errand" });
+        totalCost = price;
+        category = "errand";
+      }
+
+      const tip = urgency === "urgent" ? 25 : 15;
+
+      let reply = "عيوني يا باشا! هجيبلك الحاجات دي طازة وسخنة من أحسن مكان فوراً! 🛎️👍";
+      if (clean.includes("عيش") && customBudget) {
+        reply = `من عنيا يا باشا! هجري على الفرن أجيبلك عيش سخن بـ ${customBudget} جنيه وأطلعه لحضرتك فوراً! 🥖🛎️`;
+      } else if (category === "pharmacy") {
+        reply = "ألف سلامة يا باشا، هجري على الصيدلية حالاً وأجيب العلاج فوراً وأطلعه لحضرتك! 💊🛎️";
+      } else if (category === "plumbing_electrical") {
+        reply = "متقلقش يا فندم، هطلع فوراً بالعدة وأقفل المحبس ونعاين التسريب في الحال! 🔧🛎️";
+      } else if (category === "car_wash") {
+        reply = "عنيا يا باشا، هغسلك العربية في الباكية وألمعها وتبقى فلة قبل ما تنزل! 🚗✨";
+      }
+
+      return {
+        reply,
+        structured_data: {
+          intent: "order",
+          title: `طلب ${CATEGORY_META[category]?.label || 'مشوار'}`,
+          category,
+          urgency,
+          items,
+          estimated_total_cost_egp: totalCost,
+          suggested_tip_egp: tip,
+        }
+      };
+    }
+
+    function renderAiChat() {
+      const container = document.getElementById("ai-chat-messages");
+      if (!container) return;
+
+      container.innerHTML = state.aiChatMessages.map((msg, idx) => {
+        const isUser = msg.role === "user";
+        if (isUser) {
+          return `
+            <div class="flex items-start justify-end gap-2.5">
+              <div class="flex flex-col items-end max-w-lg">
+                <div class="bg-gradient-to-l from-teal-800 to-teal-700 text-white rounded-2xl rounded-tr-xs px-4 py-3 text-sm shadow-sm leading-relaxed">
+                  ${msg.text}
+                </div>
+                <span class="text-[10px] text-slate-400 mt-1 px-1 font-medium">${msg.time} • الساكن</span>
+              </div>
+              <div class="w-8 h-8 rounded-full bg-teal-800 text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-sm">
+                👤
+              </div>
+            </div>
+          `;
+        }
+
+        // Assistant Message
+        let structuredCardHtml = "";
+        if (msg.data && msg.data.structured_data) {
+          const sd = msg.data.structured_data;
+          const items = sd.items || [];
+          const totalCost = Number(sd.estimated_total_cost_egp || 0);
+          const tip = Number(sd.suggested_tip_egp || 15);
+          const category = sd.category || "groceries";
+          const urgency = sd.urgency || "normal";
+          const catMeta = CATEGORY_META[category] || { label: "طلب عام", icon: "📦" };
+          const isEditing = !!msg.isEditing;
+
+          if (isEditing) {
+            // =============================================================
+            // Interactive Edit Mode (محرر تفاصيل الطلب والأسعار والأصناف)
+            // =============================================================
+            structuredCardHtml = `
+              <div class="mt-3 p-3.5 sm:p-4 rounded-2xl bg-amber-50/80 border-2 border-amber-400 shadow-md space-y-3 text-xs ai-edit-card" data-msg-idx="${idx}">
+                <div class="flex items-center justify-between border-b border-amber-200 pb-2">
+                  <div class="font-extrabold text-amber-950 flex items-center gap-1.5 text-xs sm:text-sm">
+                    <span class="text-base">✏️</span>
+                    <span>تعديل تفاصيل الطلب والأسعار قبل الإرسال</span>
+                  </div>
+                  <span class="text-[10px] bg-amber-200 text-amber-900 font-bold px-2 py-0.5 rounded-full border border-amber-300">
+                    متاح تعديل كل شيء
+                  </span>
+                </div>
+
+                <!-- Title & Category & Urgency -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  <div>
+                    <label class="block text-[11px] font-bold text-slate-700 mb-1">عنوان الطلب:</label>
+                    <input
+                      type="text"
+                      class="ai-edit-title w-full text-xs font-bold p-2 rounded-xl border border-slate-300 focus:border-teal-600 focus:ring-1 focus:ring-teal-500 bg-white"
+                      value="${sd.title || 'طلب عبر الذكاء الاصطناعي'}"
+                      placeholder="مثال: طلب لبن وعيش سخن"
+                    />
+                  </div>
+                  <div>
+                    <label class="block text-[11px] font-bold text-slate-700 mb-1">نوع الخدمة:</label>
+                    <select class="ai-edit-category w-full text-xs font-bold p-2 rounded-xl border border-slate-300 focus:border-teal-600 bg-white">
+                      ${Object.entries(CATEGORY_META).map(([k, v]) => `
+                        <option value="${k}" ${category === k ? 'selected' : ''}>${v.icon} ${v.label}</option>
+                      `).join('')}
+                    </select>
+                  </div>
+                  <div>
+                    <label class="block text-[11px] font-bold text-slate-700 mb-1">درجة الأولوية:</label>
+                    <select class="ai-edit-urgency w-full text-xs font-bold p-2 rounded-xl border border-slate-300 focus:border-teal-600 bg-white">
+                      <option value="normal" ${urgency === 'normal' ? 'selected' : ''}>🕒 عادي</option>
+                      <option value="urgent" ${urgency === 'urgent' ? 'selected' : ''}>🔥 مستعجل</option>
+                      <option value="scheduled" ${urgency === 'scheduled' ? 'selected' : ''}>⏰ بموعد</option>
+                    </select>
+                  </div>
+                </div>
+
+                <!-- Items List Editor -->
+                <div class="space-y-1.5 pt-1">
+                  <div class="flex items-center justify-between">
+                    <label class="text-[11px] font-bold text-slate-800 flex items-center gap-1">
+                      <span>🛒</span> <span>الأصناف والأسعار (عدّل سعر أي صنف أو كميته براحتك):</span>
+                    </label>
+                    <button
+                      type="button"
+                      class="ai-add-item-btn text-[11px] text-teal-800 hover:text-teal-900 font-bold flex items-center gap-1 bg-white hover:bg-teal-50 px-2.5 py-1 rounded-lg border border-teal-400/80 shadow-2xs transition"
+                      data-msg-idx="${idx}"
+                    >
+                      <span>➕ إضافة صنف جديد</span>
+                    </button>
+                  </div>
+
+                  <div class="space-y-1.5">
+                    ${items.map((it, itemIdx) => `
+                      <div class="flex items-center gap-1.5 bg-white p-2 rounded-xl border border-slate-200 shadow-2xs">
+                        <input
+                          type="text"
+                          placeholder="اسم الصنف (مثال: كيلو لبن)"
+                          class="ai-item-name flex-1 text-xs font-bold p-1.5 rounded-lg border border-slate-200 focus:border-teal-600"
+                          data-item-idx="${itemIdx}"
+                          value="${it.name || ''}"
+                        />
+                        <input
+                          type="text"
+                          placeholder="الكمية"
+                          class="ai-item-qty w-20 text-xs p-1.5 rounded-lg border border-slate-200 text-center font-medium"
+                          data-item-idx="${itemIdx}"
+                          value="${it.quantity || '١'}"
+                        />
+                        <div class="flex items-center gap-1">
+                          <input
+                            type="number"
+                            min="0"
+                            step="1"
+                            placeholder="السعر"
+                            class="ai-item-price w-20 text-xs font-black p-1.5 rounded-lg border border-amber-300 text-center text-amber-800 bg-amber-50/60 focus:border-amber-500"
+                            data-item-idx="${itemIdx}"
+                            data-msg-idx="${idx}"
+                            value="${it.estimated_price_egp || 0}"
+                          />
+                          <span class="text-[10px] text-slate-500 font-bold whitespace-nowrap">ج.م</span>
+                        </div>
+                        <button
+                          type="button"
+                          class="ai-delete-item-btn text-rose-500 hover:text-rose-700 p-1.5 rounded-lg hover:bg-rose-50 font-bold text-sm transition"
+                          data-item-idx="${itemIdx}"
+                          data-msg-idx="${idx}"
+                          title="حذف هذا الصنف"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    `).join('')}
+                  </div>
+                </div>
+
+                <!-- Total Cost & Tip -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 border-t border-amber-200">
+                  <div class="bg-white p-2.5 rounded-xl border border-slate-200 flex items-center justify-between">
+                    <div>
+                      <span class="text-[11px] font-bold text-slate-700 block">إجمالي المشتريات التقديري:</span>
+                      <span class="text-[9px] text-slate-400">يحسب تلقائياً من الأصناف</span>
+                    </div>
+                    <div class="flex items-center gap-1">
+                      <input
+                        type="number"
+                        min="0"
+                        class="ai-total-cost w-24 text-sm font-black p-1 rounded-lg border border-slate-300 text-center text-slate-900 bg-slate-50"
+                        value="${totalCost}"
+                      />
+                      <span class="text-xs font-bold text-slate-600">ج.م</span>
+                    </div>
+                  </div>
+                  <div class="bg-white p-2.5 rounded-xl border border-slate-200 flex items-center justify-between">
+                    <div>
+                      <span class="text-[11px] font-bold text-amber-800 block">إكرامية البواب المقترحة:</span>
+                      <span class="text-[9px] text-slate-400">تقديراً لجهد عم عبد السميع</span>
+                    </div>
+                    <div class="flex items-center gap-1">
+                      <input
+                        type="number"
+                        min="0"
+                        class="ai-edit-tip w-20 text-sm font-black p-1 rounded-lg border border-amber-300 text-center text-amber-700 bg-amber-50"
+                        value="${tip}"
+                      />
+                      <span class="text-xs font-bold text-slate-600">ج.م</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Notes -->
+                <div>
+                  <label class="block text-[11px] font-bold text-slate-700 mb-1">تعليمات أو ملاحظات خاصة للبواب:</label>
+                  <input
+                    type="text"
+                    class="ai-edit-notes w-full text-xs p-2 rounded-xl border border-slate-300 bg-white"
+                    placeholder="مثال: هات اللبن من سوبرماركت كذا، أو رن الجرس لما توصل"
+                    value="${sd.notes || ''}"
+                  />
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="flex flex-wrap items-center gap-2 pt-1">
+                  <button
+                    type="button"
+                    class="ai-save-and-dispatch-btn flex-1 py-2.5 rounded-xl bg-gradient-to-r from-teal-700 to-emerald-700 hover:from-teal-800 hover:to-emerald-800 text-white font-black text-xs shadow-md transition flex items-center justify-center gap-1.5 active:scale-98"
+                    data-msg-idx="${idx}"
+                  >
+                    <span>🚀 اعتماد وإرسال الطلب بعد التعديل لعم عبد السميع</span>
+                  </button>
+                  <button
+                    type="button"
+                    class="ai-save-card-btn px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs transition"
+                    data-msg-idx="${idx}"
+                  >
+                    <span>💾 حفظ التعديلات</span>
+                  </button>
+                  <button
+                    type="button"
+                    class="ai-cancel-edit-btn px-4 py-2.5 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-xs transition"
+                    data-msg-idx="${idx}"
+                  >
+                    <span>↩️ إلغاء</span>
+                  </button>
+                </div>
+              </div>
+            `;
+          } else {
+            // =============================================================
+            // View Mode (معاينة البطاقة الذكية مع زر التعديل المباشر)
+            // =============================================================
+            structuredCardHtml = `
+              <div class="mt-3 p-3.5 rounded-xl bg-slate-50 border border-teal-200/80 shadow-xs space-y-2.5 text-xs">
+                <div class="flex items-center justify-between border-b border-slate-200 pb-2">
+                  <span class="font-extrabold text-teal-900 flex items-center gap-1.5">
+                    <span>${catMeta.icon}</span> <span>${sd.title || catMeta.label}</span>
+                  </span>
+                  <div class="flex items-center gap-1.5">
+                    <span class="px-2 py-0.5 rounded-full font-bold text-[10px] ${urgency === 'urgent' ? 'bg-rose-100 text-rose-800 border border-rose-200' : urgency === 'scheduled' ? 'bg-amber-100 text-amber-800' : 'bg-teal-100 text-teal-800'}">
+                      ${urgency === 'urgent' ? '🔥 مستعجل' : urgency === 'scheduled' ? '⏰ بموعد' : '🕒 عادي'}
+                    </span>
+                    <button
+                      type="button"
+                      class="ai-toggle-edit-btn text-[11px] font-bold text-amber-800 hover:text-amber-900 bg-amber-100 hover:bg-amber-200 px-2 py-0.5 rounded-lg border border-amber-300 transition flex items-center gap-1 cursor-pointer"
+                      data-msg-idx="${idx}"
+                      title="اضغط لتعديل الأصناف أو الأسعار قبل الإرسال"
+                    >
+                      <span>✏️ تعديل</span>
+                    </button>
+                  </div>
+                </div>
+
+                ${items.length > 0 ? `
+                  <div class="space-y-1">
+                    <div class="flex items-center justify-between text-[11px] font-bold text-slate-500">
+                      <span>الأصناف المستخرجة:</span>
+                      <button type="button" class="ai-toggle-edit-btn text-teal-700 hover:underline text-[10px] cursor-pointer" data-msg-idx="${idx}">
+                        تعديل السعر أو الكمية ✏️
+                      </button>
+                    </div>
+                    <div class="grid grid-cols-1 gap-1">
+                      ${items.map(it => `
+                        <div class="flex items-center justify-between bg-white px-2.5 py-1.5 rounded-lg border border-slate-200">
+                          <span class="font-bold text-slate-800">${it.name} <span class="text-teal-700 font-normal">(${it.quantity})</span></span>
+                          <span class="font-mono text-slate-700 font-bold">${it.estimated_price_egp} ج.م</span>
+                        </div>
+                      `).join('')}
+                    </div>
+                  </div>
+                ` : ''}
+
+                ${sd.notes ? `
+                  <div class="text-[11px] text-teal-900 bg-teal-50 border border-teal-200 p-2 rounded-lg font-medium">
+                    💡 ملاحظة: ${sd.notes}
+                  </div>
+                ` : ''}
+
+                <div class="flex items-center justify-between pt-1 text-slate-700 bg-white/70 p-2 rounded-lg">
+                  <div>
+                    <span class="text-[11px] text-slate-500 block">التكلفة التقديرية</span>
+                    <span class="font-black text-slate-900 text-sm">${totalCost} <span class="text-[10px]">ج.م</span></span>
+                  </div>
+                  <div class="text-left">
+                    <span class="text-[11px] text-slate-500 block">الإكرامية المقترحة</span>
+                    <span class="font-black text-amber-700 text-sm">+${tip} <span class="text-[10px]">ج.م</span></span>
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    class="ai-dispatch-order-btn w-full py-2.5 rounded-xl bg-gradient-to-r from-teal-700 to-emerald-700 hover:from-teal-800 hover:to-emerald-800 text-white font-extrabold text-xs shadow-sm transition flex items-center justify-center gap-1.5 active:scale-98 cursor-pointer"
+                    data-msg-idx="${idx}"
+                  >
+                    <span>🚀 اعتماد وإرسال فوراً</span>
+                  </button>
+                  <button
+                    type="button"
+                    class="ai-toggle-edit-btn w-full py-2.5 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 font-bold text-xs transition flex items-center justify-center gap-1.5 active:scale-98 cursor-pointer"
+                    data-msg-idx="${idx}"
+                  >
+                    <span>✏️ تعديل الأسعار أو الأصناف</span>
+                  </button>
+                </div>
+              </div>
+            `;
+          }
+        }
+
+        return `
+          <div class="flex items-start gap-2.5">
+            <div class="w-9 h-9 rounded-2xl bg-amber-400 text-slate-950 flex items-center justify-center font-black text-base shrink-0 shadow-sm border border-amber-300">
+              🛎️
+            </div>
+            <div class="flex flex-col items-start max-w-xl">
+              <div class="bg-white border border-slate-200 text-slate-800 rounded-2xl rounded-tl-xs p-4 text-sm shadow-xs leading-relaxed">
+                <div class="whitespace-pre-line">${msg.text}</div>
+                ${structuredCardHtml}
+              </div>
+              <div class="flex items-center gap-2 mt-1 px-1">
+                <span class="text-[10px] text-slate-400 font-medium">${msg.time} • عم عبد السميع</span>
+                ${msg.provider ? `<span class="text-[9px] px-1.5 py-0.2 rounded-md bg-slate-100 text-slate-600 font-mono">${msg.provider}</span>` : ''}
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      container.scrollTop = container.scrollHeight;
+    }
+
+    async function sendAiMessage(userText) {
+      if (!userText || !userText.trim()) return;
+      const text = userText.trim();
+      const user = getActiveUser();
+
+      state.aiChatMessages.push({
+        role: "user",
+        text,
+        time: "الآن"
+      });
+      renderAiChat();
+
+      const typingInd = document.getElementById("ai-typing-indicator");
+      if (typingInd) typingInd.classList.remove("hidden");
+
+      const startTime = Date.now();
+
+      try {
+        const response = await fetch(`${API_BASE}/ai-agents/chat`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            message: text,
+            resident_id: user.id || 2,
+            building_id: 1,
+            history: state.aiChatMessages.slice(-8).map(m => ({ role: m.role, content: m.text }))
+          })
+        });
+
+        if (typingInd) typingInd.classList.add("hidden");
+
+        if (response.ok) {
+          const resData = await response.json();
+          const latency = resData.latency_ms || (Date.now() - startTime);
+          const isGroq = resData.provider === "groq";
+          const modelUsed = resData.model || "Groq AI";
+
+          state.aiChatMessages.push({
+            role: "assistant",
+            text: resData.reply || resData.summary_ar || "عنيا يا باشا، طلبتك كلها متسجلة!",
+            data: resData,
+            provider: isGroq ? `🟢 متصل بـ Groq AI الحي (${modelUsed})` : "⚙️ نظام القواعد المحلي",
+            time: "الآن",
+            isEditing: false
+          });
+
+          const latencyEl = document.getElementById("ai-latency-tag");
+          if (latencyEl) latencyEl.textContent = `⚡ زمن الاستجابة: ${latency}ms`;
+          const provBadge = document.getElementById("ai-provider-badge");
+          if (provBadge) {
+            provBadge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-400 pulse-dot"></span> متصل بـ Groq AI الحي (${modelUsed})`;
+            provBadge.className = "bg-emerald-500/20 text-emerald-300 border border-emerald-400/40 text-[11px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1.5";
+          }
+        } else {
+          throw new Error("API call error");
+        }
+      } catch (err) {
+        if (typingInd) typingInd.classList.add("hidden");
+        const fallbackRes = clientSideEgyptianHeuristics(text);
+        state.aiChatMessages.push({
+          role: "assistant",
+          text: fallbackRes.reply,
+          data: fallbackRes,
+          provider: "⚠️ قالب محلي احتياطي (السيرفر غير متصل - شغّل python run.py)",
+          time: "الآن",
+          isEditing: false
+        });
+
+        const provBadge = document.getElementById("ai-provider-badge");
+        if (provBadge) {
+          provBadge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span> وضع غير متصل (قوالب محلية)`;
+          provBadge.className = "bg-amber-500/20 text-amber-300 border border-amber-400/40 text-[11px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1.5";
+        }
+        showToast("تنبيه: السيرفر غير متصل ⚠️", "شغّل السيرفر في التيرمينال عبر: python run.py للاتصال بذكاء Groq الحي");
+      }
+
+      renderAiChat();
+    }
+
+    function syncCardInputsToStructuredData(cardEl, idx) {
+      const msg = state.aiChatMessages[idx];
+      if (!msg || !msg.data || !msg.data.structured_data) return;
+      const sd = msg.data.structured_data;
+
+      const titleInput = cardEl.querySelector(".ai-edit-title");
+      if (titleInput) sd.title = titleInput.value.trim();
+
+      const catSelect = cardEl.querySelector(".ai-edit-category");
+      if (catSelect) sd.category = catSelect.value;
+
+      const urgSelect = cardEl.querySelector(".ai-edit-urgency");
+      if (urgSelect) sd.urgency = urgSelect.value;
+
+      const items = [];
+      const itemRows = cardEl.querySelectorAll(".ai-item-name");
+      const qtyRows = cardEl.querySelectorAll(".ai-item-qty");
+      const priceRows = cardEl.querySelectorAll(".ai-item-price");
+
+      itemRows.forEach((nameEl, i) => {
+        const nameVal = nameEl.value.trim();
+        if (nameVal) {
+          const qtyVal = qtyRows[i] ? qtyRows[i].value.trim() : "١";
+          const priceVal = priceRows[i] ? Number(priceRows[i].value || 0) : 0;
+          items.push({
+            name: nameVal,
+            quantity: qtyVal || "١",
+            estimated_price_egp: priceVal,
+            category: sd.category || "groceries"
+          });
+        }
+      });
+      sd.items = items;
+
+      const totalInput = cardEl.querySelector(".ai-total-cost");
+      if (totalInput) sd.estimated_total_cost_egp = Number(totalInput.value || 0);
+
+      const tipInput = cardEl.querySelector(".ai-edit-tip");
+      if (tipInput) sd.suggested_tip_egp = Number(tipInput.value || 0);
+
+      const notesInput = cardEl.querySelector(".ai-edit-notes");
+      if (notesInput) sd.notes = notesInput.value.trim();
+    }
+
+    async function createOrderFromAiCard(idx) {
+      const msg = state.aiChatMessages[idx];
+      if (!msg || !msg.data || !msg.data.structured_data) return;
+      const sd = msg.data.structured_data;
+      const user = getActiveUser();
+
+      const itemsDesc = (sd.items || []).map(i => `${i.name} (${i.quantity}) [${i.estimated_price_egp} ج.م]`).join(' + ') || sd.title;
+      const estCost = Number(sd.estimated_total_cost_egp || 0);
+      const tip = Number(sd.suggested_tip_egp || 15);
+
+      const newOrder = {
+        id: Date.now(),
+        building_id: 1,
+        resident_id: user.role === "bawab" ? 2 : user.id,
+        resident_name: user.role === "bawab" ? "أستاذ أحمد زكي" : user.full_name,
+        resident_apartment: user.role === "bawab" ? "شقة 12" : (user.apartment_number || "شقة 12"),
+        resident_floor: user.floor_number || 4,
+        category: sd.category || "groceries",
+        urgency: sd.urgency || "normal",
+        title: sd.title || "طلب عبر الذكاء الاصطناعي",
+        details: itemsDesc,
+        estimated_items_cost: estCost,
+        actual_items_cost: 0,
+        service_tip: tip,
+        payment_method: "cash",
+        is_paid: false,
+        notes: sd.notes || "تمت المراجعة والتعديل بواسطة الساكن عبر AI البواب",
+        status: "pending",
+        created_at: "الآن"
+      };
+
+      state.orders.unshift(newOrder);
+      renderAll();
+
+      // Send to FastAPI Backend
+      try {
+        await fetch(`${API_BASE}/orders`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            building_id: 1,
+            resident_id: newOrder.resident_id,
+            category: newOrder.category,
+            title: newOrder.title,
+            details: newOrder.details,
+            urgency: newOrder.urgency,
+            estimated_items_cost: newOrder.estimated_items_cost,
+            service_tip: newOrder.service_tip,
+            payment_method: "cash",
+            notes: newOrder.notes
+          })
+        });
+      } catch (err) {
+        console.log("Hybrid store saved order locally.");
+      }
+
+      showToast("تم إرسال الطلب بنجاح لعم عبد السميع 🚀", `${newOrder.title} (${estCost + tip} ج.م)`);
+
+      state.aiChatMessages.push({
+        role: "assistant",
+        text: `حاضر يا باشا! قيدت لحضرتك الطلب (${newOrder.title}) بالتعديلات والأسعار اللي حددتها تمام:
+• إجمالي المشتريات: ${estCost} ج.م
+• إكرامية البواب: ${tip} ج.م
+• الإجمالي الكلي: ${estCost + tip} ج.م
+وعم عبد السميع هيتحرك فوراً لتنفيذه! 👍🛎️`,
+        time: "الآن"
+      });
+      renderAiChat();
+    }
+
+    // AI Chat Listeners
+    const aiChatForm = document.getElementById("ai-chat-form");
+    if (aiChatForm) {
+      aiChatForm.addEventListener("submit", (e) => {
+        e.preventDefault();
+        const input = document.getElementById("ai-chat-input");
+        const val = input.value;
+        input.value = "";
+        sendAiMessage(val);
+      });
+    }
+
+    // Quick Prompt Chips
+    document.querySelectorAll(".ai-prompt-chip").forEach(chip => {
+      chip.addEventListener("click", () => {
+        const prompt = chip.dataset.prompt;
+        const input = document.getElementById("ai-chat-input");
+        if (input) input.value = prompt;
+        sendAiMessage(prompt);
+      });
+    });
+
+    // Clear Chat Button
+    const clearChatBtn = document.getElementById("clear-ai-chat-btn");
+    if (clearChatBtn) {
+      clearChatBtn.addEventListener("click", () => {
+        state.aiChatMessages = [
+          {
+            role: "assistant",
+            text: "يا مرحب يا باشا! بدأت محادثة جديدة. اؤمرني بأي طلب وأنا في خدمتك فوراً! 🛎️✨",
+            time: "الآن",
+            data: null
+          }
+        ];
+        renderAiChat();
+        showToast("تم بدء محادثة جديدة 🔄", "جاهز لاستقبال طلباتك.");
+      });
+    }
+
+    // Delegated Order Dispatch & Interactive Editing in Chat
+    const chatMsgContainer = document.getElementById("ai-chat-messages");
+    if (chatMsgContainer) {
+      // Live recalculation of total cost when any item price changes
+      chatMsgContainer.addEventListener("input", (e) => {
+        if (e.target.classList.contains("ai-item-price")) {
+          const cardEl = e.target.closest(".ai-edit-card");
+          if (!cardEl) return;
+          const priceInputs = cardEl.querySelectorAll(".ai-item-price");
+          let sum = 0;
+          priceInputs.forEach(inp => {
+            sum += Number(inp.value || 0);
+          });
+          const totalInp = cardEl.querySelector(".ai-total-cost");
+          if (totalInp) totalInp.value = sum;
+        }
+      });
+
+      chatMsgContainer.addEventListener("click", (e) => {
+        // 1. Toggle edit mode
+        const toggleBtn = e.target.closest(".ai-toggle-edit-btn");
+        if (toggleBtn) {
+          const idx = Number(toggleBtn.dataset.msgIdx);
+          if (state.aiChatMessages[idx]) {
+            state.aiChatMessages[idx].isEditing = !state.aiChatMessages[idx].isEditing;
+            renderAiChat();
+          }
+          return;
+        }
+
+        // 2. Add new item in edit mode
+        const addItemBtn = e.target.closest(".ai-add-item-btn");
+        if (addItemBtn) {
+          const idx = Number(addItemBtn.dataset.msgIdx);
+          const cardEl = addItemBtn.closest(".ai-edit-card");
+          if (cardEl) syncCardInputsToStructuredData(cardEl, idx);
+
+          const msg = state.aiChatMessages[idx];
+          if (msg && msg.data && msg.data.structured_data) {
+            msg.data.structured_data.items = msg.data.structured_data.items || [];
+            msg.data.structured_data.items.push({
+              name: "صنف إضافي",
+              quantity: "١",
+              estimated_price_egp: 20,
+              category: msg.data.structured_data.category || "groceries"
+            });
+            msg.data.structured_data.estimated_total_cost_egp = (Number(msg.data.structured_data.estimated_total_cost_egp) || 0) + 20;
+            renderAiChat();
+          }
+          return;
+        }
+
+        // 3. Delete item in edit mode
+        const delItemBtn = e.target.closest(".ai-delete-item-btn");
+        if (delItemBtn) {
+          const idx = Number(delItemBtn.dataset.msgIdx);
+          const itemIdx = Number(delItemBtn.dataset.itemIdx);
+          const cardEl = delItemBtn.closest(".ai-edit-card");
+          if (cardEl) syncCardInputsToStructuredData(cardEl, idx);
+
+          const msg = state.aiChatMessages[idx];
+          if (msg && msg.data && msg.data.structured_data && msg.data.structured_data.items) {
+            msg.data.structured_data.items.splice(itemIdx, 1);
+            const newSum = msg.data.structured_data.items.reduce((acc, it) => acc + Number(it.estimated_price_egp || 0), 0);
+            msg.data.structured_data.estimated_total_cost_egp = newSum;
+            renderAiChat();
+          }
+          return;
+        }
+
+        // 4. Save edits (exit edit mode without dispatching yet)
+        const saveBtn = e.target.closest(".ai-save-card-btn");
+        if (saveBtn) {
+          const idx = Number(saveBtn.dataset.msgIdx);
+          const cardEl = saveBtn.closest(".ai-edit-card");
+          if (cardEl) syncCardInputsToStructuredData(cardEl, idx);
+          if (state.aiChatMessages[idx]) {
+            state.aiChatMessages[idx].isEditing = false;
+            renderAiChat();
+            showToast("تم حفظ التعديلات على الطلب بنجاح ✏️", "يمكنك مراجعة تفاصيله واعتماده متى شئت.");
+          }
+          return;
+        }
+
+        // 5. Save & dispatch order immediately
+        const saveAndDispatchBtn = e.target.closest(".ai-save-and-dispatch-btn");
+        if (saveAndDispatchBtn) {
+          const idx = Number(saveAndDispatchBtn.dataset.msgIdx);
+          const cardEl = saveAndDispatchBtn.closest(".ai-edit-card");
+          if (cardEl) syncCardInputsToStructuredData(cardEl, idx);
+          if (state.aiChatMessages[idx]) {
+            state.aiChatMessages[idx].isEditing = false;
+          }
+          createOrderFromAiCard(idx);
+          return;
+        }
+
+        // 6. Cancel edit mode
+        const cancelBtn = e.target.closest(".ai-cancel-edit-btn");
+        if (cancelBtn) {
+          const idx = Number(cancelBtn.dataset.msgIdx);
+          if (state.aiChatMessages[idx]) {
+            state.aiChatMessages[idx].isEditing = false;
+            renderAiChat();
+          }
+          return;
+        }
+
+        // 7. Dispatch directly from view mode
+        const dispatchBtn = e.target.closest(".ai-dispatch-order-btn");
+        if (dispatchBtn) {
+          const idx = Number(dispatchBtn.dataset.msgIdx);
+          createOrderFromAiCard(idx);
+          return;
+        }
+      });
+    }
+
+    // Voice Note simulation
+    const voiceBtn = document.getElementById("ai-voice-btn");
+    if (voiceBtn) {
+      voiceBtn.addEventListener("click", () => {
+        showToast("🎙️ تم محاكاة رسالة صوتية بالعامية", "«عم عبد السميع هاتلي ٢ لبن وعيش سخن بسرعة»");
+        sendAiMessage("عم عبد السميع هاتلي ٢ لبن جهينة و١٠ عيش بلدي سخن بسرعة عشان الفطار");
+      });
+    }
+
+    // Check Backend Server Connection
+    async function checkBackendConnection() {
+      const badge = document.getElementById("connection-badge");
+      const provBadge = document.getElementById("ai-provider-badge");
+      try {
+        const res = await fetch(`${API_BASE}/health`, { signal: AbortSignal.timeout(3500) });
+        if (res.ok) {
+          const data = await res.json();
+          if (badge) {
+            badge.innerHTML = `⚡ متصل بالسيرفر والذكاء الاصطناعي (FastAPI + Groq)`;
+            badge.className = "bg-emerald-950/70 text-emerald-200 text-xs px-2.5 py-0.5 rounded-full border border-emerald-400/40 flex items-center gap-1.5";
+          }
+          if (provBadge) {
+            provBadge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-400 pulse-dot"></span> متصل بـ Groq AI الحي`;
+            provBadge.className = "bg-emerald-500/20 text-emerald-300 border border-emerald-400/40 text-[11px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1.5";
+          }
+        }
+      } catch (e) {
+        // Server offline
+        if (badge) {
+          badge.innerHTML = `⚠️ وضع محلي (السيرفر غير متصل - شغل python run.py)`;
+          badge.className = "bg-amber-950/60 text-amber-200 text-xs px-2.5 py-0.5 rounded-full border border-amber-400/30";
+        }
+      }
+    }
+
+    // Initial Render & Connection Check
+    renderAll();
+    renderAiChat();
+    checkBackendConnection();
+  </script>
+
+  <!-- Floating AI Chat Button -->
+  <div class="fixed bottom-6 left-6 z-40">
+    <button id="floating-ai-btn" type="button" class="flex items-center gap-2.5 bg-gradient-to-r from-teal-800 to-emerald-700 hover:from-teal-900 hover:to-emerald-800 text-white font-black px-4 py-3 rounded-full shadow-2xl border-2 border-amber-400 hover:scale-105 active:scale-95 transition cursor-pointer">
+      <span class="w-3 h-3 rounded-full bg-emerald-400 pulse-dot"></span>
+      <span class="text-xl">🛎️</span>
+      <span class="text-xs sm:text-sm font-bold">شات عم عبد السميع</span>
+    </button>
+  </div>
+
+  <script>
+    document.getElementById("floating-ai-btn").addEventListener("click", () => {
+      const tabBtn = document.querySelector('button[data-tab="aichat"]');
+      if (tabBtn) {
+        tabBtn.click();
+        window.scrollTo({ top: 120, behavior: "smooth" });
+      }
+    });
+  </script>
+</body>
+</html>
