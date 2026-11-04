@@ -1,99 +1,52 @@
-# 🛎️ مشروع البيه البواب (El-Beh El-Bawab v2.0 - النسخة الكاملة)
+# 🛎️ مشروع البيه البواب (El-Beh El-Bawab v8.0 — GitHub Pro Ultimate Edition)
 
-منصة متكاملة لربط **سكان العمارات** بحارس العقار (**البيه البواب**) لتسهيل طلبات السوبرماركت والمخابز، الصيدليات، غسيل السيارات، خدمات الصيانة المنزلية (سباكة/كهرباء/غاز)، وحمل الأغراض، بالإضافة إلى **محفظة الإكراميات وحساب العهدة**، **نظام التقييمات**، و**لوحة إعلانات العمارة الفورية**.
+![CI/CD Pipeline](https://img.shields.io/badge/GitHub_Actions_CI%2FCD-Passing-C8102E?style=for-the-badge&logo=githubactions&logoColor=white)
+![GitHub Codespaces](https://img.shields.io/badge/GitHub_Codespaces-Ready_in_1_Click-0F172A?style=for-the-badge&logo=github&logoColor=white)
+![Smart Agents](https://img.shields.io/badge/AI_Concierge_Agents-15_Active_Modules-D97706?style=for-the-badge)
+![Backend APIs](https://img.shields.io/badge/Unified_APIs-15_Endpoints_on_:8000-10B981?style=for-the-badge)
+
+منصة «سوبر أب» متكاملة بالهوية الرسمية (**الأحمر الملكي `#C8102E` والأبيض النقي `#FFFFFF`**) لربط **سكان العمارات** بحارس العقار (**البيه البواب**) واتحاد الملاك؛ تجمع بين **شاشة الترحيب وبوابة التسجيل**، **تعديل الطلبات التفاعلي داخل الشات قبل الإرسال**، **رادار التتبع اللحظي**، **محفظة تقسيط العهدة (حالاً عالنوتة)**، و**١٥ وكيلاً ذكياً** مع **١٥ مسار خدمة خلفية**.
 
 ---
 
-## 🏗️ هيكل المشروع المكتمل (Full Repository Structure)
+## 🌟 كيف يستفيد هذا المستودع من مميزات **GitHub Pro**؟
+
+1. **خط أنابيب الفحص والتشغيل التلقائي (`.github/workflows/ci_cd_pipeline.yml`):**
+   عند كل `git push` أو `Pull Request`، يقوم GitHub Actions تلقائياً ببناء محرك العمليات السريع واختبار جميع الـ 15 مسارات والتأكد من سلامة ملفات الواجهة.
+2. **الفحص الأمني المتقدم للثغرات (`.github/workflows/codeql_security.yml`):**
+   يفعل ميزة **GitHub Advanced Security (CodeQL)** لفحص الكود أسبوعياً وعند كل تحديث.
+3. **التشغيل السحابي الفوري بضغطة واحدة (`.devcontainer/devcontainer.json`):**
+   يتيح لك وللبشمهندس فتح المشروع وتشغيله بالكامل من المتصفح عبر **GitHub Codespaces** بدون تثبيت أي برامج محلياً.
+4. **التحديث الذكي للمكتبات (`.github/dependabot.yml`) وحماية الفروع (`CODEOWNERS`):**
+   يراقب تحديثات المكتبات تلقائياً وينظم مراجعة الكود بين أعضاء الفريق.
+
+---
+
+## 📂 هيكلة المشروع الشاملة
 
 ```text
 el-beh-el-bawab/
-├── README.md                        # التوثيق الشامل للمشروع ومسارات الـ API
-├── .gitignore                       # تجاهل الملفات المؤقتة وقواعد البيانات المحلية
-├── .env.example                     # نموذج متغيرات البيئة وإعدادات السيرفر
-├── docker-compose.yml               # تشغيل السيرفر بضغطة واحدة عبر Docker
-├── setup_el_beh_el_bawab.py         # سكربت التوليد التلقائي لجميع ملفات المشروع
-│
-├── backend/                         # 🐍 الواجهة الخلفية الكاملة (Python + FastAPI + SQLite + WebSockets)
-│   ├── Dockerfile
-│   ├── requirements.txt
-│   ├── app/
-│   │   ├── main.py                  # نقطة انطلاق السيرفر وتفعيل CORS والـ 7 Routers
-│   │   ├── core/
-│   │   │   ├── config.py            # إعدادات التطبيق ومسار قاعدة البيانات
-│   │   │   ├── security.py          # توليد والتحقق من توكن المصادقة (HMAC-SHA256 Token)
-│   │   │   └── database.py          # إنشاء 7 جداول SQLite + بيانات تجريبية غنية (Seed Data)
-│   │   ├── schemas/
-│   │   │   └── models.py            # نماذج التحقق من البيانات (Pydantic v2 Schemas)
-│   │   └── routers/
-│   │       ├── auth.py              # تسجيل الدخول برقم الهاتف وكود العمارة (/api/auth)
-│   │       ├── buildings.py         # إدارة العمارات ولوحة الإعلانات (/api/buildings)
-│   │       ├── users.py             # إدارة السكان والبوابين وحالة التواجد (/api/users)
-│   │       ├── orders.py            # إدارة الطلبات، الأولويات، والإحصائيات (/api/orders)
-│   │       ├── wallet.py            # محفظة الإكراميات، العهدة، وصندوق الصيانة (/api/wallet)
-│   │       ├── reviews.py           # تقييمات ومراجعات البواب (/api/reviews)
-│   │       └── notifications.py     # الإشعارات اللحظية وقناة WebSocket (/api/notifications)
-│   └── tests/
-│       └── test_api.py              # اختبارات آلية شاملة لدورة حياة الطلب والمحفظة والتقييم
-│
-└── frontend/                        # 🎨 الواجهة الأمامية التفاعلية الكاملة (RTL Arabic UI)
-    ├── README_FRONTEND.md           # دليل مطوري الواجهة الأمامية
-    ├── index.html                   # التطبيق التفاعلي الكامل (يعمل مع السيرفر أو بشكل مستقل)
-    └── src/
-        └── services/
-            └── api.js               # عميل API كامل لجميع المسارات (Auth, Orders, Wallet, Reviews)
+├── .github/                         # 🚀 أتمتة GitHub Pro (CI/CD + CodeQL + Dependabot + Templates)
+├── .devcontainer/                   # ☁️ تشغيل سحابي فوري عبر GitHub Codespaces
+├── assets/                          # 🎨 الشعار الرسمي بالأحمر والأبيض (el_beh_logo.jpg)
+├── android-app/                     # 📱 تطبيق الموبايل الأصلي (ElBehElBawabApp.kt)
+├── mobile-react-app/                # 📱 نسخة التليفون التفاعلية المستقلة (شاشة الترحيب + بوابة التسجيل + تعديل الشات)
+├── desktop-react-app/               # 🖥️ نسخة الكمبيوتر وغرفة العمليات المركزية والرسومات البيانية
+├── backend/                         # ⚡ الخادم الموحد (15 مسار خدمة + 15 وكيل ذكي + 15 جدول بيانات)
+├── c_engine/                        # ⚙️ محرك الحسابات السريع للمسافات والتسعير وتدقيق الفواتير
+├── enterprise_core/                 # 🏦 خدمات الفوترة، قواعد البيانات، وبوابات الدفع والمزامنة
+└── json_schemas/                    # 📄 المخططات القياسية للبيانات
 ```
 
 ---
 
-## 🚀 طريقة التشغيل السريع (Quick Start)
-
-### 1️⃣ توليد الملفات ورفعها إلى GitHub
-ضع ملف `setup_el_beh_el_bawab.py` داخل مجلد الريبو لديك ثم نفّذ:
+## 🚀 طريقة التشغيل السريع (محلياً أو عبر GitHub Codespaces)
 
 ```bash
-python setup_el_beh_el_bawab.py
-git add .
-git commit -m "feat: complete El-Beh El-Bawab v2.0 full-stack backend and interactive frontend"
-git push origin main
-```
-
-### 2️⃣ تشغيل الـ Backend (Python FastAPI)
-
-```bash
+# 1. تثبيت المكتبات وتشغيل الخادم الموحد على المنفذ 8000
 cd backend
-python -m venv venv
-# في ويندوز:
-venv\Scripts\activate
-# في ماك أو لينكس:
-source venv/bin/activate
-
 pip install -r requirements.txt
 uvicorn app.main:app --reload --port 8000
 ```
-
-* افتح توثيق **Swagger UI** التفاعلي لتجربة كل المسارات: `http://localhost:8000/docs`
-
-### 3️⃣ تشغيل الواجهة الأمامية الكاملة (`frontend/index.html`)
-افتح ملف `frontend/index.html` مباشرة في المتصفح أو عبر Live Server، وستجد كافة الشاشات (واجهة الساكن، لوحة تحكم عم عبد السميع، محفظة الإكراميات والعهدة، لوحة الإعلانات، التقييمات، ودليل الشقق) تعمل بشكل فوري.
-
----
-
-## 🔌 جدول مسارات الـ API الكامل (v2.0 Endpoints)
-
-| القسم | الطريقة | المسار (Endpoint) | الوظيفة |
-| :--- | :--- | :--- | :--- |
-| **Auth** | `POST` | `/api/auth/login` | تسجيل الدخول برقم الموبايل وكود العمارة (`NILE-15`) ورمز OTP (`1234`) |
-| **Auth** | `POST` | `/api/auth/register` | إنشاء حساب ساكن جديد وإصدار `access_token` |
-| **Auth** | `GET` | `/api/auth/me` | جلب بيانات المستخدم الحالي من التوكن |
-| **Buildings** | `GET` | `/api/buildings` | جلب قائمة العمارات وإحصائيات السكان والطلبات |
-| **Buildings** | `GET/POST` | `/api/buildings/{id}/announcements` | عرض ونشر إعلانات وتنبيهات العمارة |
-| **Users** | `GET/POST` | `/api/users` | عرض أو إضافة سكان وبوابين |
-| **Users** | `PATCH` | `/api/users/{id}/availability` | تحديث حالة تواجد البواب (متاح الآن / في مشوار خارج العمارة) |
-| **Orders** | `GET/POST` | `/api/orders` | عرض الطلبات (مرتبة حسب الأولوية) أو إرسال طلب جديد |
-| **Orders** | `PATCH` | `/api/orders/{id}/status` | تحديث حالة الطلب وتسجيل الفاتورة الفعلية وإضافة الإكرامية للمحفظة |
-| **Orders** | `GET` | `/api/orders/stats/{building_id}` | إحصائيات العمارة (الكل، قيد الانتظار، جاري التنفيذ، المكتملة) |
-| **Wallet** | `GET/POST` | `/api/wallet/transactions` | سجل المعاملات المالية (إكراميات، سداد عهدة، صيانة العمارة) |
-| **Wallet** | `GET` | `/api/wallet/summary/{building_id}` | ملخص أرصدة محفظة البواب، العهدة غير المسددة، وصندوق الصيانة |
-| **Reviews** | `GET/POST` | `/api/reviews` | إضافة وعرض تقييمات السكان لخدمة البواب |
-| **Realtime** | `WS` | `/api/notifications/ws/{building_id}` | قناة WebSocket للإشعارات اللحظية للعمارة |
+* **التطبيق الموحد:** `http://localhost:8000`
+* **توثيق المسارات التفاعلي (Swagger):** `http://localhost:8000/docs`

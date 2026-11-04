@@ -16,10 +16,11 @@ env/
 .env
 .env.local
 
-# Frontend / Node
+# Frontend / Mobile / Node
 node_modules/
 dist/
 build/
+.expo/
 
 # IDE & OS
 .vscode/

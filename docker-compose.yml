@@ -4,7 +4,7 @@ services:
   backend:
     build:
       context: ./backend
-    container_name: el-beh-el-bawab-backend
+    container_name: el-beh-el-bawab-v3-backend
     ports:
       - "8000:8000"
     env_file:
