@@ -76,3 +76,24 @@ def get_ai_agent_execution_logs(building_id: int = 1):
         ).fetchall()
         return [dict(r) for r in rows]
 
+
+
+# --- Order Orchestrator (tool-calling agent) ---
+from typing import Dict as _Dict, List as _List, Optional as _Optional
+from fastapi import HTTPException as _HTTPException
+from pydantic import BaseModel as _BaseModel
+from app.ai.orchestrator import run_order_orchestrator as _run_orchestrator
+
+
+class OrchestrateRequest(_BaseModel):
+    message: str
+    building_id: int = 1
+    history: _Optional[_List[_Dict[str, str]]] = None
+
+
+@router.post("/orchestrate")
+def orchestrate_order(payload: OrchestrateRequest):
+    res = _run_orchestrator(payload.message, payload.building_id, payload.history)
+    if not res.get("success"):
+        raise _HTTPException(status_code=503, detail=res.get("error", "orchestrator failed"))
+    return res
