@@ -6,7 +6,9 @@
 """
 from typing import Dict, Any, List
 import re
+import logging
 from app.core.database import get_db
+logger = logging.getLogger(__name__)
 
 # قائمة الـ 15 AI Agents الرسمية في النظام
 AI_AGENTS_CATALOG: List[Dict[str, Any]] = [
@@ -190,16 +192,27 @@ EGYPTIAN_ITEM_PRICES = {
 def run_ai_agent(agent_id: str, prompt: str, building_id: int = 1, context: Dict[str, Any] = None) -> Dict[str, Any]:
     """تشغيل أي وكيل من الـ 15 AI Agents وإرجاع نتيجة ذكية مهيكلة مع حفظها في السجل."""
     context = context or {}
-    agent_meta = next((a for a in AI_AGENTS_CATALOG if a["id"] == agent_id), AI_AGENTS_CATALOG[0])
+
+    agent_meta = next((a for a in AI_AGENTS_CATALOG if a["id"] == agent_id), None)
+
+    if agent_meta is None:
+        return {
+            "success": False,
+            "error": f"Agent ID '{agent_id}' غير موجود. الـ IDs المتاحة: {[a['id'] for a in AI_AGENTS_CATALOG]}",
+            "agent_id": agent_id,
+            "confidence": 0.0,
+        }
+
     clean_prompt = (prompt or agent_meta["sample_input"]).strip()
 
     result: Dict[str, Any] = {
+        "success": True,
         "agent_id": agent_meta["id"],
         "agent_number": agent_meta["number"],
         "agent_name_ar": agent_meta["name_ar"],
         "icon": agent_meta["icon"],
         "input_prompt": clean_prompt,
-        "confidence": 0.97,
+        "confidence": 0.85,
     }
 
     if agent_id == "agent_01_order_parser":
@@ -213,22 +226,40 @@ def run_ai_agent(agent_id: str, prompt: str, building_id: int = 1, context: Dict
             "latency_ms": groq_res.get("latency_ms", 45),
             "structured_data": groq_res.get("structured_data", {}),
             "action_recommendation": groq_res.get("action_recommendation", "اضغط «تأكيد الطلب» لإرساله للبواب."),
+            "confidence": groq_res.get("confidence", 0.95),
         })
 
     elif agent_id == "agent_02_price_estimator":
-        est_cost = sum(v for k, v in EGYPTIAN_ITEM_PRICES.items() if k in clean_prompt) or 185.0
+        matched_prices = [v for k, v in EGYPTIAN_ITEM_PRICES.items() if k in clean_prompt]
+        est_cost = sum(matched_prices) if matched_prices else None
         heavy = any(w in clean_prompt for w in ["أنبوبة", "كرتونة", "شنط", "مياه", "أرز"])
         rec_tip = 35.0 if heavy else 20.0
-        result.update({
-            "summary_ar": f"التكلفة التقديرية للمشتريات: {est_cost:.0f} ج.م • الإكرامية العادلة المقترحة: {rec_tip:.0f} ج.م",
-            "structured_data": {
-                "estimated_market_cost_egp": est_cost,
-                "fair_service_tip_egp": rec_tip,
-                "total_expected_egp": est_cost + rec_tip,
-                "weight_class": "ثقيل / يتطلب مجهود إضافي" if heavy else "خفيف / متوسط",
-            },
-            "action_recommendation": "تم ضبط ميزانية الطلب بناءً على متوسط أسعار السوق المصري اليوم.",
-        })
+
+        if est_cost is None:
+            result.update({
+                "summary_ar": "مش قادر أحدد تكلفة دقيقة من النص الحالي. ممكن توضح الأصناف أكتر؟",
+                "structured_data": {
+                    "estimated_market_cost_egp": None,
+                    "fair_service_tip_egp": rec_tip,
+                    "total_expected_egp": None,
+                    "weight_class": "غير محدد",
+                    "note": "لم يتم التعرف على أصناف معروفة في الكتالوج"
+                },
+                "confidence": 0.4,
+                "action_recommendation": "اكتب الأصناف بوضوح أكتر (مثال: لبن + بيض + عيش).",
+            })
+        else:
+            result.update({
+                "summary_ar": f"التكلفة التقديرية للمشتريات: {est_cost:.0f} ج.م • الإكرامية العادلة المقترحة: {rec_tip:.0f} ج.م",
+                "structured_data": {
+                    "estimated_market_cost_egp": est_cost,
+                    "fair_service_tip_egp": rec_tip,
+                    "total_expected_egp": est_cost + rec_tip,
+                    "weight_class": "ثقيل / يتطلب مجهود إضافي" if heavy else "خفيف / متوسط",
+                },
+                "confidence": 0.82,
+                "action_recommendation": "تم ضبط ميزانية الطلب بناءً على متوسط أسعار السوق المصري اليوم.",
+            })
 
     elif agent_id == "agent_03_errand_batcher":
         result.update({
@@ -407,7 +438,9 @@ def run_ai_agent(agent_id: str, prompt: str, building_id: int = 1, context: Dict
                     result["confidence"],
                 ),
             )
-    except Exception:
-        pass
+        result["log_saved"] = True
+    except Exception as exc:
+        logger.warning("ai_agent_logs insert failed: %s", exc)
+        result["log_saved"] = False
 
     return result
