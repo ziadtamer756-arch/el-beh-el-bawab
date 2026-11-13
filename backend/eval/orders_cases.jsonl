@@ -1,0 +1,30 @@
+{"id": 1, "text": "عايز لبن", "expect": {"intent": "order", "items": ["لبن"], "urgency": "normal"}}
+{"id": 2, "text": "هاتلي 2 لبن وعيش سخن", "expect": {"intent": "order", "items": ["لبن", "عيش"], "urgency": "normal"}}
+{"id": 3, "text": "جيبلي كرتونة بيض وكيلو سكر", "expect": {"intent": "order", "items": ["بيض", "سكر"], "urgency": "normal"}}
+{"id": 4, "text": "محتاج بنادول ضروري لعيل عنده سخونية", "expect": {"intent": "order", "items": ["بنادول"], "urgency": "urgent"}}
+{"id": 5, "text": "عايز أنبوبة بوتاجاز للدور السابع", "expect": {"intent": "order", "items": ["أنبوبة"], "urgency": "normal"}}
+{"id": 6, "text": "هات كيلو أرز ومكرونة وزيت", "expect": {"intent": "order", "items": ["أرز", "مكرونة", "زيت"], "urgency": "normal"}}
+{"id": 7, "text": "عايز فول وطعمية للفطار بسرعة", "expect": {"intent": "order", "items": ["فول", "طعمية"], "urgency": "urgent"}}
+{"id": 8, "text": "هات حاجة", "expect": {"clarify": true}}
+{"id": 9, "text": "في ريحة غاز في المطبخ", "expect": {"intent": "emergency"}}
+{"id": 10, "text": "الأسانسير واقف وفيه حد محبوس", "expect": {"intent": "emergency"}}
+{"id": 11, "text": "صباح الخير يا عم عبد السميع", "expect": {"intent": "other"}}
+{"id": 12, "text": "الدليفري اتأخر قوي ومحدش رد عليا", "expect": {"intent": "other"}}
+{"id": 13, "text": "هاتلي شيبسي وبيبسي", "expect": {"intent": "order", "items": ["شيبسي", "بيبسي"], "urgency": "normal"}}
+{"id": 14, "text": "عايز لبن اطفال وحفاضات حالا", "expect": {"intent": "order", "items": ["لبن", "حفاضات"], "urgency": "urgent"}}
+{"id": 15, "text": "هاتلي 3 عيش و2 جبنة", "expect": {"intent": "order", "items": ["عيش", "جبنة"], "urgency": "normal"}}
+{"id": 16, "text": "نسيت أقولك هات شاي كمان", "expect": {"items": ["شاي"]}}
+{"id": 17, "text": "عندي تسريب مياه في الحمام", "expect": {"intent": ["emergency", "other"]}}
+{"id": 18, "text": "ابعتلي حد يجيب أدوية من الصيدلية والروشتة معايا", "expect": {"clarify": true, "urgency": "urgent"}}
+{"id": 19, "text": "كيلو سكر وكيلو ارز ولتر زيت وعلبة شاي", "expect": {"intent": "order", "items": ["سكر", "أرز", "زيت", "شاي"], "urgency": "normal"}}
+{"id": 20, "text": "اتنين لبن وتلات عيش", "expect": {"intent": "order", "items": ["لبن", "عيش"], "urgency": "normal"}}
+{"id": 21, "text": "مش عايز لبن، هات حليب", "expect": {"intent": "order", "items": ["حليب"], "forbidden": ["لبن"], "urgency": "normal"}}
+{"id": 22, "text": "هاتلي دواء الضغط من الصيدلية دلوقتي", "expect": {"intent": "order", "items": ["ضغط"], "urgency": "urgent"}}
+{"id": 23, "text": "هات عيش بكرة الصبح", "expect": {"intent": "order", "items": ["عيش"], "urgency": "normal"}}
+{"id": 24, "text": "الغاز خلص عايز أنبوبة بسرعة", "expect": {"intent": "order", "items": ["أنبوبة"], "urgency": "urgent"}}
+{"id": 25, "text": "هات لي ربع جبنة رومي", "expect": {"intent": "order", "items": ["جبنة"], "urgency": "normal"}}
+{"id": 26, "text": "هاتلي ٢ لبن", "expect": {"intent": "order", "items": ["لبن"], "urgency": "normal"}}
+{"id": 27, "text": "عايز ملح وفلفل وكمون", "expect": {"intent": "order", "items": ["ملح", "فلفل", "كمون"], "urgency": "normal"}}
+{"id": 28, "text": "حريق في الدور التالت", "expect": {"intent": "emergency"}}
+{"id": 29, "text": "واحد وقع على السلم ومش بيتحرك", "expect": {"intent": "emergency"}}
+{"id": 30, "text": "ازيك يا عم عبد السميع عامل إيه", "expect": {"intent": "other"}}
