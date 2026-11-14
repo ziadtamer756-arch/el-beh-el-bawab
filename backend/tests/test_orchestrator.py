@@ -83,6 +83,38 @@ def test_prices_are_forced_when_model_skips_the_tool(monkeypatch):
     assert any(t.get("forced") for t in res["trace"])
 
 
+def test_incomplete_pricing_cannot_be_confirmed(monkeypatch):
+    final = {
+        "intent": "order",
+        "reply": "فيه صنف محتاج مراجعة",
+        "items": [{"name": "صنف غير معروف", "quantity": 1}],
+        "needs_clarification": None,
+    }
+    monkeypatch.setattr(
+        orch, "get_client",
+        lambda: FakeClient([llm_msg(content=json.dumps(final, ensure_ascii=False))])
+    )
+    res = orch.run_order_orchestrator("هاتلي صنف غير معروف", save=False)
+    assert res["pricing"]["is_complete"] is False
+    assert res["requires_confirmation"] is False
+
+
+def test_pending_clarification_cannot_be_confirmed(monkeypatch):
+    final = {
+        "intent": "order",
+        "reply": "تقصد أي نوع؟",
+        "items": [{"name": "لبن", "quantity": 1}],
+        "needs_clarification": "حدد نوع اللبن",
+    }
+    monkeypatch.setattr(
+        orch, "get_client",
+        lambda: FakeClient([llm_msg(content=json.dumps(final, ensure_ascii=False))])
+    )
+    res = orch.run_order_orchestrator("هاتلي لبن", save=False)
+    assert res["pricing"]["is_complete"] is True
+    assert res["requires_confirmation"] is False
+
+
 def test_emergency_is_not_an_order(monkeypatch):
     final = {"intent": "emergency", "reply": "اضغط زر الطوارئ فوراً",
              "items": [], "needs_clarification": None}
@@ -127,3 +159,79 @@ def test_run_is_saved_to_agent_runs(monkeypatch):
     assert res["run_saved"] is True
     row = conn.execute("SELECT agent, success, tool_calls FROM agent_runs").fetchone()
     assert row == ("order_orchestrator", 1, 2)
+
+
+def test_missing_quantity_is_not_assumed():
+    assert orch._qty(None) is None
+    assert orch._qty("") is None
+
+    result = orch.lookup_prices([{"name": "لبن"}])
+
+    assert result["lines"][0]["quantity"] is None
+    assert result["lines"][0]["unit_price_egp"] == 30.0
+    assert result["lines"][0]["line_total_egp"] is None
+    assert result["missing_quantities"] == ["لبن"]
+    assert result["is_complete"] is False
+
+
+def test_missing_quantity_prevents_order_confirmation(monkeypatch):
+    final = {
+        "intent": "order",
+        "reply": "حاضر",
+        "items": [{"name": "لبن", "quantity": None}],
+        "needs_clarification": None,
+    }
+
+    monkeypatch.setattr(
+        orch,
+        "get_client",
+        lambda: FakeClient([
+            llm_msg(content=json.dumps(final, ensure_ascii=False))
+        ]),
+    )
+
+    result = orch.run_order_orchestrator("هاتلي لبن", save=False)
+
+    assert result["items"][0]["name"] == "لبن"
+    assert result["items"][0]["quantity"] is None
+    assert result["pricing"]["is_complete"] is False
+    assert result["needs_clarification"] is not None
+    assert result["requires_confirmation"] is False
+
+
+def test_empty_pricing_tool_result_is_recovered(monkeypatch):
+    final = {
+        "intent": "order",
+        "reply": "حاضر",
+        "items": [{"name": "لبن", "quantity": 2}],
+        "needs_clarification": None,
+    }
+
+    client = FakeClient([
+        llm_msg(tool_calls=[
+            tool_call("1", "lookup_prices", {"items": []}),
+            tool_call("2", "classify_priority", {"text": "هاتلي  لبن"}),
+        ]),
+        llm_msg(content=json.dumps(final, ensure_ascii=False)),
+    ])
+
+    monkeypatch.setattr(orch, "get_client", lambda: client)
+
+    result = orch.run_order_orchestrator("هاتلي  لبن", save=False)
+
+    assert result["items"][0]["name"] == "لبن"
+    assert result["pricing"]["known_total_egp"] == 60.0
+    assert result["requires_confirmation"] is True
+    assert any(t.get("forced") for t in result["trace"])
+
+def test_price_match_survives_small_spelling_changes(monkeypatch):
+    monkeypatch.setattr(orch, "_prices", lambda: {"لبن": 30.0, "أنبوبة": 200.0})
+    res = orch.lookup_prices([{"name": "أنبوب بوتاجاز", "quantity": 1}])
+    assert res["unknown_items"] == []
+    assert res["lines"][0]["unit_price_egp"] == 200.0
+
+
+def test_price_match_does_not_overreach(monkeypatch):
+    monkeypatch.setattr(orch, "_prices", lambda: {"لبن": 30.0, "أنبوبة": 200.0})
+    res = orch.lookup_prices([{"name": "لبنان", "quantity": 1}])
+    assert res["lines"][0]["unit_price_egp"] is None

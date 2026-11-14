@@ -45,13 +45,23 @@ def _norm(text: Any) -> str:
     return _DIACRITICS.sub("", str(text)).translate(_AR_MAP).strip().lower()
 
 
-def _qty(value: Any) -> float:
-    if isinstance(value, (int, float)) and value > 0:
-        return float(min(value, 100))
-    m = re.search(r"\d+(?:\.\d+)?", str(value or "").translate(_AR_DIGITS))
-    if m:
-        return float(min(max(float(m.group()), 0.1), 100))
-    return 1.0
+
+def _qty(value: Any) -> Optional[float]:
+    """Return None when quantity was not explicitly provided."""
+    if value is None or isinstance(value, bool):
+        return None
+
+    if isinstance(value, (int, float)):
+        if value > 0:
+            return float(min(value, 100))
+        return None
+
+    raw = str(value).translate(_AR_DIGITS)
+    match = re.search(r"\d+(?:\.\d+)?", raw)
+    if match:
+        return float(min(max(float(match.group()), 0.1), 100))
+
+    return None
 
 
 # ----------------------------------------------------------------------- tools
@@ -69,49 +79,88 @@ def _prices() -> Dict[str, float]:
     return getattr(_engine, "EGYPTIAN_ITEM_PRICES", {}) or {}
 
 
-def _match_price(name: str):
-    """Best (longest) catalog key that matches the item name. (None, None) if unknown."""
-    n = _norm(name)
-    best_key, best_price = None, None
+def _stem_token(tok):
+    """Light Arabic stemming: drop leading al-, trailing ta-marbuta/ha and plural -at."""
+    if tok.startswith("ال") and len(tok) > 4:
+        tok = tok[2:]
+    for suffix in ("ات", "ه"):
+        if tok.endswith(suffix) and len(tok) - len(suffix) >= 3:
+            return tok[: -len(suffix)]
+    return tok
+
+
+def stem_tokens(text):
+    return [_stem_token(t) for t in re.findall(r"\w+", _norm(text))]
+
+
+def _match_price(name):
+    """Longest catalog key whose stemmed words all appear in the item name, else (None, None)."""
+    name_toks = stem_tokens(name)
+    best_key, best_price, best_len = None, None, 0
     for key, price in _prices().items():
-        k = _norm(key)
-        if not k or not isinstance(price, (int, float)):
+        key_toks = stem_tokens(key)
+        if not key_toks or not isinstance(price, (int, float)):
             continue
-        if k in n or (len(n) >= 3 and n in k):
-            if best_key is None or len(k) > len(_norm(best_key)):
-                best_key, best_price = key, float(price)
+        if all(k in name_toks for k in key_toks):
+            klen = sum(len(k) for k in key_toks)
+            if klen > best_len:
+                best_key, best_price, best_len = key, float(price), klen
     return best_key, best_price
 
 
 def lookup_prices(items: List[Any]) -> Dict[str, Any]:
-    """Prices come ONLY from the internal catalog. Unknown items stay unknown (None)."""
-    lines, unknown, known_total, heavy = [], [], 0.0, False
-    for it in items or []:
-        if isinstance(it, str):
-            it = {"name": it}
-        if not isinstance(it, dict):
+    """Use internal catalog prices without inventing missing quantities."""
+    lines, unknown, missing_quantities = [], [], []
+    known_total, heavy = 0.0, False
+
+    for item in items or []:
+        if isinstance(item, str):
+            item = {"name": item}
+        if not isinstance(item, dict):
             continue
-        name = str(it.get("name", "")).strip()
+
+        name = str(item.get("name", "")).strip()
         if not name:
             continue
-        qty = _qty(it.get("quantity"))
+
+        qty = _qty(item.get("quantity"))
         key, price = _match_price(name)
-        if any(w in _norm(name) for w in _HEAVY_WORDS):
+
+        if any(word in _norm(name) for word in _HEAVY_WORDS):
             heavy = True
+
         if price is None:
             unknown.append(name)
-            lines.append({"name": name, "quantity": qty, "matched_as": None,
-                          "unit_price_egp": None, "line_total_egp": None})
-        else:
-            total = round(price * qty, 2)
-            known_total += total
-            lines.append({"name": name, "quantity": qty, "matched_as": key,
-                          "unit_price_egp": price, "line_total_egp": total})
+
+        if qty is None:
+            missing_quantities.append(name)
+
+        if price is None or qty is None:
+            lines.append({
+                "name": name,
+                "quantity": qty,
+                "matched_as": key,
+                "unit_price_egp": price,
+                "line_total_egp": None,
+            })
+            continue
+
+        total = round(price * qty, 2)
+        known_total += total
+        lines.append({
+            "name": name,
+            "quantity": qty,
+            "matched_as": key,
+            "unit_price_egp": price,
+            "line_total_egp": total,
+        })
+
     return {
         "lines": lines,
         "known_total_egp": round(known_total, 2),
         "unknown_items": unknown,
-        "is_complete": bool(lines) and not unknown,
+        "missing_quantities": missing_quantities,
+        "is_complete": bool(lines) and not unknown and not missing_quantities,
         "suggested_tip_egp": (35.0 if heavy else 20.0) if lines else 0.0,
         "price_basis": "internal estimate table, not live market prices",
     }
@@ -147,18 +196,22 @@ SYSTEM_PROMPT = """You are the order assistant of "El Beh El Bawab", an Egyptian
 Residents write short messages in Egyptian Arabic dialect. Turn each message into a clean DRAFT order.
 
 Rules:
-1. Extract the items: short natural Arabic name (e.g. "لبن", not a sentence) and a numeric quantity.
-2. Call lookup_prices ONCE with all items. NEVER invent or estimate a price yourself.
-3. Call classify_priority with the original message text.
-4. If the message is ambiguous or items are missing, do not guess: put ONE short question in
-   needs_clarification (Egyptian Arabic).
-5. Do NOT write prices or totals in "reply"; the app shows prices from the tool results.
-6. intent is one of: "order", "emergency" (gas leak, stuck elevator, fire, injury), "other".
-   For "emergency" do not build an order; reply briefly and tell them to use the SOS button.
+1. Extract EVERY clearly mentioned item. Never drop an item because its quantity is missing.
+2. Include a numeric quantity only when the resident explicitly states it. Otherwise use null in the final JSON and omit quantity from the pricing tool arguments.
+3. Never assume a quantity of 1.
+4. Call lookup_prices ONCE with all extracted items. NEVER invent or estimate a price yourself.
+5. Call classify_priority with the original message text.
+6. If an item quantity is missing, ask one short question about the missing quantity in needs_clarification.
+7. If an item is ambiguous or unknown, preserve it and ask one short clarification question. Do not guess.
+8. Do NOT write prices or totals in reply; the app shows prices from tool results.
+9. intent is one of: "order", "emergency", "other".
+10. Use "emergency" ONLY for immediate safety threats such as fire, gas leak, trapped elevator, or serious injury.
+    A normal pharmacy or medicine request is an order, NOT an emergency.
+    For a genuine emergency, do not build an order; tell the resident to use the SOS button.
 
 When done, answer with ONE JSON object only, no extra text:
-{"intent": "order", "reply": "short friendly Egyptian Arabic reply, no prices",
- "items": [{"name": "لبن", "quantity": 2}], "needs_clarification": null}"""
+{"intent":"order","reply":"short friendly Egyptian Arabic reply, no prices",
+ "items":[{"name":"لبن","quantity":null}],"needs_clarification":"عايز كام؟"}"""
 
 
 # ------------------------------------------------------------------- internals
@@ -303,7 +356,9 @@ def run_order_orchestrator(message: str, building_id: int = 1,
     items = final.get("items") or []
 
     # safety net: an order must never be shown without prices from the tool
-    if intent == "order" and items and pricing is None:
+    if intent == "order" and items and (
+        pricing is None or not pricing.get("lines")
+    ):
         pricing = lookup_prices(items)
         trace.append({"tool": "lookup_prices", "args": {"items": items},
                       "result": pricing, "forced": True})
@@ -312,14 +367,36 @@ def run_order_orchestrator(message: str, building_id: int = 1,
         trace.append({"tool": "classify_priority", "args": {"text": text},
                       "result": priority, "forced": True})
 
+    needs_clarification = final.get("needs_clarification")
+
+    if pricing is not None and not needs_clarification:
+        missing = pricing.get("missing_quantities", [])
+        unknown = pricing.get("unknown_items", [])
+
+        if missing:
+            needs_clarification = (
+                "محتاج تحدد الكمية المطلوبة من: " + "، ".join(missing)
+            )
+        elif unknown:
+            needs_clarification = (
+                "محتاج أتأكد من الصنف: " + "، ".join(unknown)
+            )
+
+    confirmation_ready = (
+        intent == "order"
+        and pricing is not None
+        and pricing.get("is_complete") is True
+        and not needs_clarification
+    )
+
     result = {
         "success": True, "agent": AGENT_NAME, "intent": intent,
         "reply": final.get("reply", ""),
-        "items": pricing["lines"] if pricing else items,
+        "items": pricing["lines"] if pricing and pricing.get("lines") else items,
         "pricing": pricing, "urgency": priority["urgency"],
         "urgency_reasons": priority["reasons"],
-        "needs_clarification": final.get("needs_clarification"),
-        "requires_confirmation": intent == "order",
+        "needs_clarification": needs_clarification,
+        "requires_confirmation": confirmation_ready,
         "provider": "groq", "model": used_model,
         "tool_calls": len(trace), "trace": trace,
         "latency_ms": int((time.time() - started) * 1000),

@@ -14,7 +14,7 @@ orders_cases.jsonl (one JSON object per line):
 Run from the backend folder (PYTHONPATH must be the backend folder):
     python eval\\run_eval.py                 # Order Orchestrator (needs GROQ_API_KEY)
     python eval\\run_eval.py --limit 5       # first 5 cases only
-    python eval\\run_eval.py --baseline      # old rules-based parser (no LLM), items/urgency only
+    python eval\\run_eval.py --baseline      # Agent 01 fallback_egyptian_parser (no LLM)
     python eval\\run_eval.py --delay 4       # slower, if Groq answers with 429 rate limits
 """
 import argparse
@@ -43,11 +43,16 @@ def item_matches(expected: str, names: List[str]) -> bool:
 
 
 def score_case(expect: Dict[str, Any], got: Dict[str, Any], baseline: bool = False) -> Dict[str, Any]:
-    """Returns {check_name: True/False} only for the checks the case defines."""
+    """Returns {check_name: True/False} only for the checks the case defines.
+
+    Missing needs_clarification is treated as False (not skipped). The baseline
+    flag is kept for call compatibility; intent/clarify are scored in both modes.
+    """
     checks: Dict[str, Any] = {}
     names = got.get("items", [])
+    _ = baseline
 
-    if "intent" in expect and not baseline:
+    if "intent" in expect:
         accepted = expect["intent"] if isinstance(expect["intent"], list) else [expect["intent"]]
         checks["intent"] = got.get("intent") in accepted
 
@@ -65,7 +70,7 @@ def score_case(expect: Dict[str, Any], got: Dict[str, Any], baseline: bool = Fal
     if "urgency" in expect:
         checks["urgency"] = got.get("urgency") == expect["urgency"]
 
-    if expect.get("clarify") is not None and not baseline:
+    if expect.get("clarify") is not None:
         checks["clarify"] = bool(got.get("needs_clarification")) == bool(expect["clarify"])
     return checks
 
@@ -135,10 +140,15 @@ def baseline_runner(text: str) -> Dict[str, Any]:
     except Exception as exc:
         return {"success": False, "error": str(exc)}
     data = res.get("structured_data") if isinstance(res.get("structured_data"), dict) else res
-    items = data.get("items") or res.get("items") or []
+    items = data.get("items") if data.get("items") is not None else (res.get("items") or [])
+    clarify = data.get("needs_clarification")
+    if clarify is None:
+        clarify = res.get("needs_clarification")
     return {"success": True,
+            "intent": data.get("intent") or res.get("intent"),
             "items": [i.get("name", "") if isinstance(i, dict) else str(i) for i in items],
             "urgency": data.get("urgency") or res.get("urgency"),
+            "needs_clarification": bool(clarify),
             "latency_ms": int((time.time() - start) * 1000), "tool_calls": 0}
 
 
@@ -167,9 +177,11 @@ def main() -> None:
     s = summarize(rows)
 
     print(f"\n=== {mode}: {s['cases']} cases, {s['failed_calls']} failed calls ===")
-    if not args.baseline:
-        print(f"intent accuracy   : {fmt(s['intent'])}")
-        print(f"clarify accuracy  : {fmt(s['clarify'])}")
+    if args.baseline:
+        print("Baseline measures Agent 01 fallback_egyptian_parser (local rules, no Groq).")
+        print("Checks: intent, clarify (missing needs_clarification counts as false), items, urgency, forbidden.")
+    print(f"intent accuracy   : {fmt(s['intent'])}")
+    print(f"clarify accuracy  : {fmt(s['clarify'])}")
     print(f"urgency accuracy  : {fmt(s['urgency'])}")
     print(f"item recall       : {fmt(s['item_recall'])}")
     print(f"item precision    : {fmt(s['item_precision'])}")
