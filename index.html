@@ -1489,6 +1489,91 @@
       };
     }
 
+    // =========================================================================
+    // AI order helpers: strict validation, no invented quantities/prices/tips
+    // =========================================================================
+    const AI_URGENCY_VALUES = ["normal", "urgent", "scheduled"];
+
+    function esc(v) {
+      return String(v === null || v === undefined ? "" : v)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
+
+    // Arabic-Indic (٠-٩) and Persian (۰-۹) digits -> ASCII, Arabic decimal/thousands separators handled
+    function normalizeDigits(v) {
+      return String(v === null || v === undefined ? "" : v)
+        .replace(/[\u0660-\u0669]/g, d => String(d.charCodeAt(0) - 0x0660))
+        .replace(/[\u06F0-\u06F9]/g, d => String(d.charCodeAt(0) - 0x06F0))
+        .replace(/\u066B/g, ".")
+        .replace(/[\u066C\s]/g, "")
+        .trim();
+    }
+
+    // Returns a finite number, or null when the value is blank / not a plain number
+    function parseNum(v) {
+      if (typeof v === "number") return Number.isFinite(v) ? v : null;
+      const s = normalizeDigits(v);
+      return /^\d+(\.\d+)?$/.test(s) ? Number(s) : null;
+    }
+
+    function roundMoney(n) {
+      return Math.round(n * 100) / 100;
+    }
+
+    // total = SUM(quantity x unit price). total stays null unless EVERY item is complete.
+    function analyzeAiItems(items) {
+      const rows = (items || []).map(it => {
+        const name = String(it && it.name !== undefined && it.name !== null ? it.name : "").trim();
+        const qty = parseNum(it ? it.quantity : null);
+        const price = parseNum(it ? it.estimated_price_egp : null);
+        const okQty = qty !== null && qty > 0;
+        const okPrice = price !== null && price > 0;
+        return {
+          name,
+          qty: okQty ? qty : null,
+          price: okPrice ? price : null,
+          lineTotal: okQty && okPrice ? roundMoney(qty * price) : null,
+          valid: name !== "" && okQty && okPrice
+        };
+      });
+      const valid = rows.length > 0 && rows.every(r => r.valid);
+      const total = valid ? roundMoney(rows.reduce((s, r) => s + r.lineTotal, 0)) : null;
+      return { rows, valid, total };
+    }
+
+    function validateAiOrder(msg) {
+      const sd = msg && msg.data && msg.data.structured_data;
+      if (!msg || msg.source !== "orchestrator" || msg.can_submit !== true || !sd) {
+        return { ok: false, error: "الرسالة دي مش طلب جاهز للإرسال." };
+      }
+      if (msg.submitted) return { ok: false, error: "الطلب ده اتبعت قبل كده." };
+      if (!CATEGORY_META[sd.category]) return { ok: false, error: "اختار نوع الخدمة الأول." };
+      if (!AI_URGENCY_VALUES.includes(sd.urgency)) return { ok: false, error: "حدد درجة الأولوية من زر التعديل." };
+      const title = String(sd.title || "").trim();
+      if (!title) return { ok: false, error: "اكتب عنوان للطلب." };
+      const a = analyzeAiItems(sd.items);
+      if (!a.rows.length) return { ok: false, error: "مفيش أصناف في الطلب." };
+      if (!a.valid || a.total === null) {
+        return { ok: false, error: "كل صنف لازم يكون له اسم وكمية وسعر وحدة صحيحين (أكبر من صفر)." };
+      }
+      const tip = parseNum(sd.suggested_tip_egp);
+      if (tip === null) return { ok: false, error: "حدد الإكرامية (اكتب 0 لو مفيش)." };
+      return {
+        ok: true,
+        category: sd.category,
+        urgency: sd.urgency,
+        title,
+        items: a.rows,
+        total: a.total,
+        tip,
+        notes: String(sd.notes || "").trim()
+      };
+    }
+
     function renderAiChat() {
       const container = document.getElementById("ai-chat-messages");
       if (!container) return;
@@ -1500,9 +1585,9 @@
             <div class="flex items-start justify-end gap-2.5">
               <div class="flex flex-col items-end max-w-lg">
                 <div class="bg-gradient-to-l from-teal-800 to-teal-700 text-white rounded-2xl rounded-tr-xs px-4 py-3 text-sm shadow-sm leading-relaxed">
-                  ${msg.text}
+                  ${esc(msg.text)}
                 </div>
-                <span class="text-[10px] text-slate-400 mt-1 px-1 font-medium">${msg.time} • الساكن</span>
+                <span class="text-[10px] text-slate-400 mt-1 px-1 font-medium">${esc(msg.time)} • الساكن</span>
               </div>
               <div class="w-8 h-8 rounded-full bg-teal-800 text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-sm">
                 👤
@@ -1511,17 +1596,27 @@
           `;
         }
 
-        // Assistant Message
+        // Assistant message. An order card is shown ONLY for a validated orchestrator reply.
         let structuredCardHtml = "";
-        if (msg.data && msg.data.structured_data) {
-          const sd = msg.data.structured_data;
-          const items = sd.items || [];
-          const totalCost = Number(sd.estimated_total_cost_egp || 0);
-          const tip = Number(sd.suggested_tip_egp || 15);
-          const category = sd.category || "groceries";
-          const urgency = sd.urgency || "normal";
-          const catMeta = CATEGORY_META[category] || { label: "طلب عام", icon: "📦" };
+        const sd = msg.data && msg.data.structured_data;
+        const cardAllowed = !!sd && msg.source === "orchestrator" && msg.can_submit === true;
+
+        if (cardAllowed && msg.submitted) {
+          structuredCardHtml = `
+            <div class="mt-3 p-3 rounded-xl bg-emerald-50 border border-emerald-300 text-xs font-bold text-emerald-900">
+              ✅ تم إرسال الطلب لعم عبد السميع
+            </div>
+          `;
+        } else if (cardAllowed) {
+          const items = Array.isArray(sd.items) ? sd.items : [];
+          const analysis = analyzeAiItems(items);
+          const tipNum = parseNum(sd.suggested_tip_egp);
+          const category = CATEGORY_META[sd.category] ? sd.category : "";
+          const urgency = AI_URGENCY_VALUES.includes(sd.urgency) ? sd.urgency : "";
+          const catMeta = CATEGORY_META[category] || { label: "نوع الخدمة غير محدد", icon: "📦" };
           const isEditing = !!msg.isEditing;
+          const busy = msg.submitting ? "disabled" : "";
+          const busyCls = msg.submitting ? "opacity-60 cursor-not-allowed" : "";
 
           if (isEditing) {
             // =============================================================
@@ -1535,7 +1630,7 @@
                     <span>تعديل تفاصيل الطلب والأسعار قبل الإرسال</span>
                   </div>
                   <span class="text-[10px] bg-amber-200 text-amber-900 font-bold px-2 py-0.5 rounded-full border border-amber-300">
-                    متاح تعديل كل شيء
+                    الأسعار تقديرية
                   </span>
                 </div>
 
@@ -1546,24 +1641,26 @@
                     <input
                       type="text"
                       class="ai-edit-title w-full text-xs font-bold p-2 rounded-xl border border-slate-300 focus:border-teal-600 focus:ring-1 focus:ring-teal-500 bg-white"
-                      value="${sd.title || 'طلب عبر الذكاء الاصطناعي'}"
+                      value="${esc(sd.title)}"
                       placeholder="مثال: طلب لبن وعيش سخن"
                     />
                   </div>
                   <div>
                     <label class="block text-[11px] font-bold text-slate-700 mb-1">نوع الخدمة:</label>
                     <select class="ai-edit-category w-full text-xs font-bold p-2 rounded-xl border border-slate-300 focus:border-teal-600 bg-white">
+                      <option value="" ${category === "" ? "selected" : ""}>— اختر نوع الخدمة —</option>
                       ${Object.entries(CATEGORY_META).map(([k, v]) => `
-                        <option value="${k}" ${category === k ? 'selected' : ''}>${v.icon} ${v.label}</option>
-                      `).join('')}
+                        <option value="${k}" ${category === k ? "selected" : ""}>${v.icon} ${v.label}</option>
+                      `).join("")}
                     </select>
                   </div>
                   <div>
                     <label class="block text-[11px] font-bold text-slate-700 mb-1">درجة الأولوية:</label>
                     <select class="ai-edit-urgency w-full text-xs font-bold p-2 rounded-xl border border-slate-300 focus:border-teal-600 bg-white">
-                      <option value="normal" ${urgency === 'normal' ? 'selected' : ''}>🕒 عادي</option>
-                      <option value="urgent" ${urgency === 'urgent' ? 'selected' : ''}>🔥 مستعجل</option>
-                      <option value="scheduled" ${urgency === 'scheduled' ? 'selected' : ''}>⏰ بموعد</option>
+                      <option value="" ${urgency === "" ? "selected" : ""}>— اختر الأولوية —</option>
+                      <option value="normal" ${urgency === "normal" ? "selected" : ""}>🕒 عادي</option>
+                      <option value="urgent" ${urgency === "urgent" ? "selected" : ""}>🔥 مستعجل</option>
+                      <option value="scheduled" ${urgency === "scheduled" ? "selected" : ""}>⏰ بموعد</option>
                     </select>
                   </div>
                 </div>
@@ -1572,7 +1669,7 @@
                 <div class="space-y-1.5 pt-1">
                   <div class="flex items-center justify-between">
                     <label class="text-[11px] font-bold text-slate-800 flex items-center gap-1">
-                      <span>🛒</span> <span>الأصناف والأسعار (عدّل سعر أي صنف أو كميته براحتك):</span>
+                      <span>🛒</span> <span>الأصناف (الكمية × سعر الوحدة):</span>
                     </label>
                     <button
                       type="button"
@@ -1585,31 +1682,32 @@
 
                   <div class="space-y-1.5">
                     ${items.map((it, itemIdx) => `
-                      <div class="flex items-center gap-1.5 bg-white p-2 rounded-xl border border-slate-200 shadow-2xs">
+                      <div class="ai-item-row flex items-center gap-1.5 bg-white p-2 rounded-xl border border-slate-200 shadow-2xs">
                         <input
                           type="text"
-                          placeholder="اسم الصنف (مثال: كيلو لبن)"
+                          placeholder="اسم الصنف"
                           class="ai-item-name flex-1 text-xs font-bold p-1.5 rounded-lg border border-slate-200 focus:border-teal-600"
                           data-item-idx="${itemIdx}"
-                          value="${it.name || ''}"
+                          value="${esc(it.name)}"
                         />
                         <input
                           type="text"
+                          inputmode="decimal"
                           placeholder="الكمية"
-                          class="ai-item-qty w-20 text-xs p-1.5 rounded-lg border border-slate-200 text-center font-medium"
+                          class="ai-item-qty w-16 text-xs p-1.5 rounded-lg border border-slate-200 text-center font-medium"
                           data-item-idx="${itemIdx}"
-                          value="${it.quantity || '١'}"
+                          value="${esc(it.quantity)}"
                         />
+                        <span class="text-[10px] text-slate-400 font-bold">×</span>
                         <div class="flex items-center gap-1">
                           <input
-                            type="number"
-                            min="0"
-                            step="1"
-                            placeholder="السعر"
+                            type="text"
+                            inputmode="decimal"
+                            placeholder="سعر الوحدة"
                             class="ai-item-price w-20 text-xs font-black p-1.5 rounded-lg border border-amber-300 text-center text-amber-800 bg-amber-50/60 focus:border-amber-500"
                             data-item-idx="${itemIdx}"
                             data-msg-idx="${idx}"
-                            value="${it.estimated_price_egp || 0}"
+                            value="${esc(it.estimated_price_egp)}"
                           />
                           <span class="text-[10px] text-slate-500 font-bold whitespace-nowrap">ج.م</span>
                         </div>
@@ -1623,7 +1721,7 @@
                           ✕
                         </button>
                       </div>
-                    `).join('')}
+                    `).join("")}
                   </div>
                 </div>
 
@@ -1632,29 +1730,31 @@
                   <div class="bg-white p-2.5 rounded-xl border border-slate-200 flex items-center justify-between">
                     <div>
                       <span class="text-[11px] font-bold text-slate-700 block">إجمالي المشتريات التقديري:</span>
-                      <span class="text-[9px] text-slate-400">يحسب تلقائياً من الأصناف</span>
+                      <span class="text-[9px] text-slate-400">مجموع (الكمية × سعر الوحدة)، بيتحسب تلقائياً</span>
                     </div>
                     <div class="flex items-center gap-1">
                       <input
-                        type="number"
-                        min="0"
+                        type="text"
+                        readonly
                         class="ai-total-cost w-24 text-sm font-black p-1 rounded-lg border border-slate-300 text-center text-slate-900 bg-slate-50"
-                        value="${totalCost}"
+                        value="${analysis.total === null ? "" : analysis.total}"
+                        placeholder="غير مكتمل"
                       />
                       <span class="text-xs font-bold text-slate-600">ج.م</span>
                     </div>
                   </div>
                   <div class="bg-white p-2.5 rounded-xl border border-slate-200 flex items-center justify-between">
                     <div>
-                      <span class="text-[11px] font-bold text-amber-800 block">إكرامية البواب المقترحة:</span>
-                      <span class="text-[9px] text-slate-400">تقديراً لجهد عم عبد السميع</span>
+                      <span class="text-[11px] font-bold text-amber-800 block">إكرامية البواب:</span>
+                      <span class="text-[9px] text-slate-400">اكتب 0 لو مفيش</span>
                     </div>
                     <div class="flex items-center gap-1">
                       <input
-                        type="number"
-                        min="0"
+                        type="text"
+                        inputmode="decimal"
                         class="ai-edit-tip w-20 text-sm font-black p-1 rounded-lg border border-amber-300 text-center text-amber-700 bg-amber-50"
-                        value="${tip}"
+                        value="${esc(sd.suggested_tip_egp)}"
+                        placeholder="حدد"
                       />
                       <span class="text-xs font-bold text-slate-600">ج.م</span>
                     </div>
@@ -1668,7 +1768,7 @@
                     type="text"
                     class="ai-edit-notes w-full text-xs p-2 rounded-xl border border-slate-300 bg-white"
                     placeholder="مثال: هات اللبن من سوبرماركت كذا، أو رن الجرس لما توصل"
-                    value="${sd.notes || ''}"
+                    value="${esc(sd.notes)}"
                   />
                 </div>
 
@@ -1676,21 +1776,24 @@
                 <div class="flex flex-wrap items-center gap-2 pt-1">
                   <button
                     type="button"
-                    class="ai-save-and-dispatch-btn flex-1 py-2.5 rounded-xl bg-gradient-to-r from-teal-700 to-emerald-700 hover:from-teal-800 hover:to-emerald-800 text-white font-black text-xs shadow-md transition flex items-center justify-center gap-1.5 active:scale-98"
+                    ${busy}
+                    class="ai-save-and-dispatch-btn flex-1 py-2.5 rounded-xl bg-gradient-to-r from-teal-700 to-emerald-700 hover:from-teal-800 hover:to-emerald-800 text-white font-black text-xs shadow-md transition flex items-center justify-center gap-1.5 active:scale-98 ${busyCls}"
                     data-msg-idx="${idx}"
                   >
-                    <span>🚀 اعتماد وإرسال الطلب بعد التعديل لعم عبد السميع</span>
+                    <span>${msg.submitting ? "⏳ جاري الإرسال..." : "🚀 اعتماد وإرسال الطلب بعد التعديل لعم عبد السميع"}</span>
                   </button>
                   <button
                     type="button"
-                    class="ai-save-card-btn px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs transition"
+                    ${busy}
+                    class="ai-save-card-btn px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs transition ${busyCls}"
                     data-msg-idx="${idx}"
                   >
                     <span>💾 حفظ التعديلات</span>
                   </button>
                   <button
                     type="button"
-                    class="ai-cancel-edit-btn px-4 py-2.5 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-xs transition"
+                    ${busy}
+                    class="ai-cancel-edit-btn px-4 py-2.5 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-xs transition ${busyCls}"
                     data-msg-idx="${idx}"
                   >
                     <span>↩️ إلغاء</span>
@@ -1706,12 +1809,16 @@
               <div class="mt-3 p-3.5 rounded-xl bg-slate-50 border border-teal-200/80 shadow-xs space-y-2.5 text-xs">
                 <div class="flex items-center justify-between border-b border-slate-200 pb-2">
                   <span class="font-extrabold text-teal-900 flex items-center gap-1.5">
-                    <span>${catMeta.icon}</span> <span>${sd.title || catMeta.label}</span>
+                    <span>${catMeta.icon}</span> <span>${esc(sd.title || catMeta.label)}</span>
                   </span>
                   <div class="flex items-center gap-1.5">
-                    <span class="px-2 py-0.5 rounded-full font-bold text-[10px] ${urgency === 'urgent' ? 'bg-rose-100 text-rose-800 border border-rose-200' : urgency === 'scheduled' ? 'bg-amber-100 text-amber-800' : 'bg-teal-100 text-teal-800'}">
-                      ${urgency === 'urgent' ? '🔥 مستعجل' : urgency === 'scheduled' ? '⏰ بموعد' : '🕒 عادي'}
-                    </span>
+                    ${urgency ? `
+                      <span class="px-2 py-0.5 rounded-full font-bold text-[10px] ${urgency === "urgent" ? "bg-rose-100 text-rose-800 border border-rose-200" : urgency === "scheduled" ? "bg-amber-100 text-amber-800" : "bg-teal-100 text-teal-800"}">
+                        ${urgency === "urgent" ? "🔥 مستعجل" : urgency === "scheduled" ? "⏰ بموعد" : "🕒 عادي"}
+                      </span>
+                    ` : `
+                      <span class="px-2 py-0.5 rounded-full font-bold text-[10px] bg-amber-100 text-amber-800">الأولوية غير محددة</span>
+                    `}
                     <button
                       type="button"
                       class="ai-toggle-edit-btn text-[11px] font-bold text-amber-800 hover:text-amber-900 bg-amber-100 hover:bg-amber-200 px-2 py-0.5 rounded-lg border border-amber-300 transition flex items-center gap-1 cursor-pointer"
@@ -1723,6 +1830,16 @@
                   </div>
                 </div>
 
+                ${category === "" ? `
+                  <div class="bg-amber-50 border border-amber-300 rounded-lg p-2">
+                    <label class="block text-[11px] font-bold text-amber-900 mb-1">اختار نوع الخدمة عشان تقدر تبعت الطلب:</label>
+                    <select class="ai-view-category w-full text-xs font-bold p-2 rounded-lg border border-amber-300 bg-white" data-msg-idx="${idx}">
+                      <option value="" selected>— اختر نوع الخدمة —</option>
+                      ${Object.entries(CATEGORY_META).map(([k, v]) => `<option value="${k}">${v.icon} ${v.label}</option>`).join("")}
+                    </select>
+                  </div>
+                ` : ""}
+
                 ${items.length > 0 ? `
                   <div class="space-y-1">
                     <div class="flex items-center justify-between text-[11px] font-bold text-slate-500">
@@ -1732,40 +1849,44 @@
                       </button>
                     </div>
                     <div class="grid grid-cols-1 gap-1">
-                      ${items.map(it => `
+                      ${items.map((it, i) => {
+                        const r = analysis.rows[i];
+                        return `
                         <div class="flex items-center justify-between bg-white px-2.5 py-1.5 rounded-lg border border-slate-200">
-                          <span class="font-bold text-slate-800">${it.name} <span class="text-teal-700 font-normal">(${it.quantity})</span></span>
-                          <span class="font-mono text-slate-700 font-bold">${it.estimated_price_egp} ج.م</span>
-                        </div>
-                      `).join('')}
+                          <span class="font-bold text-slate-800">${esc(it.name)} <span class="text-teal-700 font-normal">(${r.qty !== null ? r.qty : "؟"} × ${r.price !== null ? r.price : "؟"})</span></span>
+                          <span class="font-mono text-slate-700 font-bold">${r.lineTotal !== null ? r.lineTotal : "—"} ج.م</span>
+                        </div>`;
+                      }).join("")}
                     </div>
                   </div>
-                ` : ''}
+                ` : ""}
 
                 ${sd.notes ? `
                   <div class="text-[11px] text-teal-900 bg-teal-50 border border-teal-200 p-2 rounded-lg font-medium">
-                    💡 ملاحظة: ${sd.notes}
+                    💡 ملاحظة: ${esc(sd.notes)}
                   </div>
-                ` : ''}
+                ` : ""}
 
                 <div class="flex items-center justify-between pt-1 text-slate-700 bg-white/70 p-2 rounded-lg">
                   <div>
                     <span class="text-[11px] text-slate-500 block">التكلفة التقديرية</span>
-                    <span class="font-black text-slate-900 text-sm">${totalCost} <span class="text-[10px]">ج.م</span></span>
+                    <span class="font-black text-slate-900 text-sm">${analysis.total === null ? "غير مكتمل" : analysis.total} <span class="text-[10px]">ج.م</span></span>
                   </div>
                   <div class="text-left">
-                    <span class="text-[11px] text-slate-500 block">الإكرامية المقترحة</span>
-                    <span class="font-black text-amber-700 text-sm">+${tip} <span class="text-[10px]">ج.م</span></span>
+                    <span class="text-[11px] text-slate-500 block">الإكرامية</span>
+                    <span class="font-black text-amber-700 text-sm">${tipNum === null ? "—" : "+" + tipNum} <span class="text-[10px]">ج.م</span></span>
                   </div>
                 </div>
+                <div class="text-[10px] text-slate-400">الأسعار تقديرية من جدول داخلي، مش أسعار السوق الحالية.</div>
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <button
                     type="button"
-                    class="ai-dispatch-order-btn w-full py-2.5 rounded-xl bg-gradient-to-r from-teal-700 to-emerald-700 hover:from-teal-800 hover:to-emerald-800 text-white font-extrabold text-xs shadow-sm transition flex items-center justify-center gap-1.5 active:scale-98 cursor-pointer"
+                    ${busy}
+                    class="ai-dispatch-order-btn w-full py-2.5 rounded-xl bg-gradient-to-r from-teal-700 to-emerald-700 hover:from-teal-800 hover:to-emerald-800 text-white font-extrabold text-xs shadow-sm transition flex items-center justify-center gap-1.5 active:scale-98 cursor-pointer ${busyCls}"
                     data-msg-idx="${idx}"
                   >
-                    <span>🚀 اعتماد وإرسال فوراً</span>
+                    <span>${msg.submitting ? "⏳ جاري الإرسال..." : "🚀 اعتماد وإرسال"}</span>
                   </button>
                   <button
                     type="button"
@@ -1787,98 +1908,194 @@
             </div>
             <div class="flex flex-col items-start max-w-xl">
               <div class="bg-white border border-slate-200 text-slate-800 rounded-2xl rounded-tl-xs p-4 text-sm shadow-xs leading-relaxed">
-                <div class="whitespace-pre-line">${msg.text}</div>
+                <div class="whitespace-pre-line">${esc(msg.text)}</div>
+                ${msg.notice ? `<div class="mt-2 text-[11px] text-amber-900 bg-amber-50 border border-amber-300 rounded-lg p-2 font-medium whitespace-pre-line">${esc(msg.notice)}</div>` : ""}
                 ${structuredCardHtml}
               </div>
               <div class="flex items-center gap-2 mt-1 px-1">
-                <span class="text-[10px] text-slate-400 font-medium">${msg.time} • عم عبد السميع</span>
-                ${msg.provider ? `<span class="text-[9px] px-1.5 py-0.2 rounded-md bg-slate-100 text-slate-600 font-mono">${msg.provider}</span>` : ''}
+                <span class="text-[10px] text-slate-400 font-medium">${esc(msg.time)} • عم عبد السميع</span>
+                ${msg.provider ? `<span class="text-[9px] px-1.5 py-0.2 rounded-md bg-slate-100 text-slate-600 font-mono">${esc(msg.provider)}</span>` : ""}
               </div>
             </div>
           </div>
         `;
-      }).join('');
+      }).join("");
 
       container.scrollTop = container.scrollHeight;
     }
 
+    let aiSending = false;
+
+    // Maps an /ai-agents/orchestrate reply to a chat message.
+    // can_submit is true ONLY when every safety condition holds (otherwise: text only, no card).
+    function buildOrchestratorMessage(res) {
+      const pricing = res.pricing && typeof res.pricing === "object" ? res.pricing : null;
+      const lines = pricing && Array.isArray(pricing.lines) ? pricing.lines : [];
+      const modelUsed = res.model || "Groq AI";
+      const clarification = res.needs_clarification;
+
+      const asNames = (arr) => (Array.isArray(arr) ? arr : [])
+        .map(x => (x && typeof x === "object" ? (x.name || "") : String(x)))
+        .filter(Boolean);
+      const unknownItems = asNames(pricing && pricing.unknown_items);
+      const missingQty = asNames(pricing && pricing.missing_quantities);
+
+      const itemsOk = lines.length > 0 && lines.every(l => {
+        const q = parseNum(l && l.quantity);
+        const p = parseNum(l && l.unit_price_egp);
+        return !!l && String(l.name || "").trim() !== "" && q !== null && q > 0 && p !== null && p > 0;
+      });
+
+      const canSubmit = res.success === true
+        && res.intent === "order"
+        && res.requires_confirmation === true
+        && !clarification
+        && !!pricing
+        && pricing.is_complete === true
+        && unknownItems.length === 0
+        && missingQty.length === 0
+        && itemsOk;
+
+      let text = res.reply || (typeof clarification === "string" ? clarification : "") || "وصلتني رسالتك.";
+
+      let notice = "";
+      if (res.intent === "order" && !canSubmit) {
+        const parts = [];
+        if (unknownItems.length) parts.push("أصناف مالهاش سعر عندنا: " + unknownItems.join("، "));
+        if (missingQty.length) parts.push("كميات ناقصة: " + missingQty.join("، "));
+        if (!parts.length && !clarification) parts.push("الطلب لسه مش مكتمل، فمفيش بطاقة إرسال.");
+        notice = parts.join("\n");
+      }
+
+      let structured;
+      if (canSubmit) {
+        const cats = lines.map(l => (CATEGORY_META[l.category] ? l.category : null));
+        const sameCat = cats.every(c => c && c === cats[0]) ? cats[0] : null;
+        const category = sameCat || (CATEGORY_META[res.category] ? res.category : null);
+        const names = lines.map(l => String(l.name).trim());
+        const title = names.slice(0, 3).join("، ") + (names.length > 3 ? "…" : "");
+        const items = lines.map(l => ({
+          name: l.name,
+          quantity: l.quantity,
+          estimated_price_egp: l.unit_price_egp,
+          category
+        }));
+        const tip = parseNum(pricing.suggested_tip_egp);
+        structured = {
+          intent: "order",
+          title,
+          category,
+          urgency: AI_URGENCY_VALUES.includes(res.urgency) ? res.urgency : null,
+          items,
+          estimated_total_cost_egp: analyzeAiItems(items).total,
+          suggested_tip_egp: tip === null ? "" : tip,
+          notes: ""
+        };
+      }
+
+      const data = Object.assign({}, res);
+      delete data.structured_data;
+      if (structured) data.structured_data = structured;
+
+      return {
+        role: "assistant",
+        text,
+        data,
+        provider: res.provider === "groq" ? `🟢 متصل بـ Groq AI الحي (${modelUsed})` : `⚙️ ${res.provider || "orchestrator"}`,
+        time: "الآن",
+        isEditing: false,
+        source: "orchestrator",
+        can_submit: canSubmit,
+        notice,
+        submitted: false,
+        submitting: false
+      };
+    }
+
     async function sendAiMessage(userText) {
       if (!userText || !userText.trim()) return;
-      const text = userText.trim();
-      const user = getActiveUser();
-
-      state.aiChatMessages.push({
-        role: "user",
-        text,
-        time: "الآن"
-      });
-      renderAiChat();
-
-      const typingInd = document.getElementById("ai-typing-indicator");
-      if (typingInd) typingInd.classList.remove("hidden");
-
-      const startTime = Date.now();
+      if (aiSending) return;
+      aiSending = true;
 
       try {
-        const response = await fetch(`${API_BASE}/ai-agents/chat`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            message: text,
-            resident_id: user.id || 2,
-            building_id: 1,
-            history: state.aiChatMessages.slice(-8).map(m => ({ role: m.role, content: m.text }))
-          })
-        });
+        const text = userText.trim();
+
+        // History is captured BEFORE the current message is added (no duplicates).
+        const history = state.aiChatMessages
+          .filter(m => m.text && m.source !== "fallback")
+          .slice(-8)
+          .map(m => ({ role: m.role, content: m.text }));
+
+        state.aiChatMessages.push({ role: "user", text, time: "الآن" });
+        renderAiChat();
+
+        const typingInd = document.getElementById("ai-typing-indicator");
+        if (typingInd) typingInd.classList.remove("hidden");
+
+        const startTime = Date.now();
+        let res = null;
+        let failure = "";
+
+        try {
+          // NOTE: no resident_id here. /orders (not this endpoint) needs it.
+          const response = await fetch(`${API_BASE}/ai-agents/orchestrate`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ message: text, building_id: 1, history }),
+            signal: AbortSignal.timeout(60000)
+          });
+          if (response.ok) {
+            res = await response.json();
+          } else {
+            failure = `HTTP ${response.status}`;
+            try {
+              const e = await response.json();
+              if (e && e.detail) failure += ": " + (typeof e.detail === "string" ? e.detail : JSON.stringify(e.detail));
+            } catch (_) {}
+          }
+        } catch (err) {
+          failure = String((err && err.message) || err);
+        }
 
         if (typingInd) typingInd.classList.add("hidden");
 
-        if (response.ok) {
-          const resData = await response.json();
-          const latency = resData.latency_ms || (Date.now() - startTime);
-          const isGroq = resData.provider === "groq";
-          const modelUsed = resData.model || "Groq AI";
-
-          state.aiChatMessages.push({
-            role: "assistant",
-            text: resData.reply || resData.summary_ar || "عنيا يا باشا، طلبتك كلها متسجلة!",
-            data: resData,
-            provider: isGroq ? `🟢 متصل بـ Groq AI الحي (${modelUsed})` : "⚙️ نظام القواعد المحلي",
-            time: "الآن",
-            isEditing: false
-          });
+        if (res && res.success === true) {
+          const latency = res.latency_ms !== undefined && res.latency_ms !== null ? res.latency_ms : (Date.now() - startTime);
+          const modelUsed = res.model || "Groq AI";
+          state.aiChatMessages.push(buildOrchestratorMessage(res));
 
           const latencyEl = document.getElementById("ai-latency-tag");
           if (latencyEl) latencyEl.textContent = `⚡ زمن الاستجابة: ${latency}ms`;
           const provBadge = document.getElementById("ai-provider-badge");
           if (provBadge) {
-            provBadge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-400 pulse-dot"></span> متصل بـ Groq AI الحي (${modelUsed})`;
+            provBadge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-400 pulse-dot"></span> متصل بـ Groq AI الحي (${esc(modelUsed)})`;
             provBadge.className = "bg-emerald-500/20 text-emerald-300 border border-emerald-400/40 text-[11px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1.5";
           }
         } else {
-          throw new Error("API call error");
+          if (res && !failure) failure = String(res.error || "success=false");
+          console.warn("AI orchestrator unavailable:", failure);
+          // Plain text only: no order card, no local order, no success message.
+          state.aiChatMessages.push({
+            role: "assistant",
+            text: "المساعد الذكي مش متاح دلوقتي، جرّب تاني بعد شوية. (مفيش أي طلب اتسجل)",
+            data: null,
+            provider: "⚠️ المساعد غير متاح",
+            time: "الآن",
+            isEditing: false,
+            source: "fallback",
+            can_submit: false
+          });
+          const provBadge = document.getElementById("ai-provider-badge");
+          if (provBadge) {
+            provBadge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span> المساعد الذكي غير متاح`;
+            provBadge.className = "bg-amber-500/20 text-amber-300 border border-amber-400/40 text-[11px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1.5";
+          }
+          showToast("المساعد الذكي غير متاح ⚠️", "اتأكد إن السيرفر شغال (python run.py) وإن مفتاح Groq متظبط.");
         }
-      } catch (err) {
-        if (typingInd) typingInd.classList.add("hidden");
-        const fallbackRes = clientSideEgyptianHeuristics(text);
-        state.aiChatMessages.push({
-          role: "assistant",
-          text: fallbackRes.reply,
-          data: fallbackRes,
-          provider: "⚠️ قالب محلي احتياطي (السيرفر غير متصل - شغّل python run.py)",
-          time: "الآن",
-          isEditing: false
-        });
-
-        const provBadge = document.getElementById("ai-provider-badge");
-        if (provBadge) {
-          provBadge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span> وضع غير متصل (قوالب محلية)`;
-          provBadge.className = "bg-amber-500/20 text-amber-300 border border-amber-400/40 text-[11px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1.5";
-        }
-        showToast("تنبيه: السيرفر غير متصل ⚠️", "شغّل السيرفر في التيرمينال عبر: python run.py للاتصال بذكاء Groq الحي");
+      } finally {
+        aiSending = false;
+        renderAiChat();
       }
-
-      renderAiChat();
     }
 
     function syncCardInputsToStructuredData(cardEl, idx) {
@@ -1890,109 +2107,141 @@
       if (titleInput) sd.title = titleInput.value.trim();
 
       const catSelect = cardEl.querySelector(".ai-edit-category");
-      if (catSelect) sd.category = catSelect.value;
+      if (catSelect) sd.category = catSelect.value || null;
 
       const urgSelect = cardEl.querySelector(".ai-edit-urgency");
-      if (urgSelect) sd.urgency = urgSelect.value;
+      if (urgSelect) sd.urgency = urgSelect.value || null;
 
+      // Raw text is kept as typed: blank / invalid values stay incomplete (never defaulted).
       const items = [];
-      const itemRows = cardEl.querySelectorAll(".ai-item-name");
-      const qtyRows = cardEl.querySelectorAll(".ai-item-qty");
-      const priceRows = cardEl.querySelectorAll(".ai-item-price");
-
-      itemRows.forEach((nameEl, i) => {
-        const nameVal = nameEl.value.trim();
-        if (nameVal) {
-          const qtyVal = qtyRows[i] ? qtyRows[i].value.trim() : "١";
-          const priceVal = priceRows[i] ? Number(priceRows[i].value || 0) : 0;
-          items.push({
-            name: nameVal,
-            quantity: qtyVal || "١",
-            estimated_price_egp: priceVal,
-            category: sd.category || "groceries"
-          });
-        }
+      cardEl.querySelectorAll(".ai-item-row").forEach(row => {
+        const nameEl = row.querySelector(".ai-item-name");
+        const qtyEl = row.querySelector(".ai-item-qty");
+        const priceEl = row.querySelector(".ai-item-price");
+        items.push({
+          name: nameEl ? nameEl.value.trim() : "",
+          quantity: qtyEl ? qtyEl.value.trim() : "",
+          estimated_price_egp: priceEl ? priceEl.value.trim() : "",
+          category: sd.category || null
+        });
       });
       sd.items = items;
-
-      const totalInput = cardEl.querySelector(".ai-total-cost");
-      if (totalInput) sd.estimated_total_cost_egp = Number(totalInput.value || 0);
+      sd.estimated_total_cost_egp = analyzeAiItems(items).total;
 
       const tipInput = cardEl.querySelector(".ai-edit-tip");
-      if (tipInput) sd.suggested_tip_egp = Number(tipInput.value || 0);
+      if (tipInput) sd.suggested_tip_egp = tipInput.value.trim();
 
       const notesInput = cardEl.querySelector(".ai-edit-notes");
       if (notesInput) sd.notes = notesInput.value.trim();
     }
 
+    // One validated submission path, used by BOTH "dispatch" buttons.
+    // Nothing is added to state.orders and no success is shown until the backend answers ok.
     async function createOrderFromAiCard(idx) {
       const msg = state.aiChatMessages[idx];
-      if (!msg || !msg.data || !msg.data.structured_data) return;
-      const sd = msg.data.structured_data;
-      const user = getActiveUser();
+      if (!msg || msg.submitting) return;
 
-      const itemsDesc = (sd.items || []).map(i => `${i.name} (${i.quantity}) [${i.estimated_price_egp} ج.م]`).join(' + ') || sd.title;
-      const estCost = Number(sd.estimated_total_cost_egp || 0);
-      const tip = Number(sd.suggested_tip_egp || 15);
-
-      const newOrder = {
-        id: Date.now(),
-        building_id: 1,
-        resident_id: user.role === "bawab" ? 2 : user.id,
-        resident_name: user.role === "bawab" ? "أستاذ أحمد زكي" : user.full_name,
-        resident_apartment: user.role === "bawab" ? "شقة 12" : (user.apartment_number || "شقة 12"),
-        resident_floor: user.floor_number || 4,
-        category: sd.category || "groceries",
-        urgency: sd.urgency || "normal",
-        title: sd.title || "طلب عبر الذكاء الاصطناعي",
-        details: itemsDesc,
-        estimated_items_cost: estCost,
-        actual_items_cost: 0,
-        service_tip: tip,
-        payment_method: "cash",
-        is_paid: false,
-        notes: sd.notes || "تمت المراجعة والتعديل بواسطة الساكن عبر AI البواب",
-        status: "pending",
-        created_at: "الآن"
-      };
-
-      state.orders.unshift(newOrder);
-      renderAll();
-
-      // Send to FastAPI Backend
-      try {
-        await fetch(`${API_BASE}/orders`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            building_id: 1,
-            resident_id: newOrder.resident_id,
-            category: newOrder.category,
-            title: newOrder.title,
-            details: newOrder.details,
-            urgency: newOrder.urgency,
-            estimated_items_cost: newOrder.estimated_items_cost,
-            service_tip: newOrder.service_tip,
-            payment_method: "cash",
-            notes: newOrder.notes
-          })
-        });
-      } catch (err) {
-        console.log("Hybrid store saved order locally.");
+      const v = validateAiOrder(msg);
+      if (!v.ok) {
+        showToast("مش هينفع أبعت الطلب ⚠️", esc(v.error));
+        renderAiChat();
+        return;
       }
 
-      showToast("تم إرسال الطلب بنجاح لعم عبد السميع 🚀", `${newOrder.title} (${estCost + tip} ج.م)`);
+      const user = getActiveUser();
+      if (!user) {
+        showToast("مش هينفع أبعت الطلب ⚠️", "مفيش مستخدم نشط.");
+        return;
+      }
 
-      state.aiChatMessages.push({
-        role: "assistant",
-        text: `حاضر يا باشا! قيدت لحضرتك الطلب (${newOrder.title}) بالتعديلات والأسعار اللي حددتها تمام:
-• إجمالي المشتريات: ${estCost} ج.م
-• إكرامية البواب: ${tip} ج.م
-• الإجمالي الكلي: ${estCost + tip} ج.م
-وعم عبد السميع هيتحرك فوراً لتنفيذه! 👍🛎️`,
-        time: "الآن"
-      });
+      const details = v.items.map(i => `${i.name} (${i.qty} × ${i.price} ج.م = ${i.lineTotal} ج.م)`).join(" + ");
+      const grand = roundMoney(v.total + v.tip);
+      const confirmed = window.confirm(
+        "تأكيد إرسال الطلب لعم عبد السميع؟\n\n" +
+        v.items.map(i => `• ${i.name}: ${i.qty} × ${i.price} = ${i.lineTotal} ج.م`).join("\n") +
+        `\n\nإجمالي المشتريات (تقديري): ${v.total} ج.م` +
+        `\nالإكرامية: ${v.tip} ج.م` +
+        `\nالإجمالي: ${grand} ج.م` +
+        "\n\nالأسعار تقديرية من جدول داخلي وليست أسعار السوق الحالية."
+      );
+      if (!confirmed) return;
+
+      msg.submitting = true;
       renderAiChat();
+
+      try {
+        const residentId = user.role === "bawab" ? 2 : user.id;
+        const payload = {
+          building_id: 1,
+          resident_id: residentId,
+          category: v.category,
+          title: v.title,
+          details,
+          urgency: v.urgency,
+          estimated_items_cost: v.total,
+          service_tip: v.tip,
+          payment_method: "cash",
+          notes: v.notes
+        };
+
+        const response = await fetch(`${API_BASE}/orders`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        if (response.ok !== true) {
+          let reason = `HTTP ${response.status}`;
+          try {
+            const e = await response.json();
+            if (e && e.detail) reason += ": " + (typeof e.detail === "string" ? e.detail : JSON.stringify(e.detail)).slice(0, 160);
+          } catch (_) {}
+          throw new Error(reason);
+        }
+
+        const created = await response.json().catch(() => null);
+        const newOrder = Object.assign({
+          id: Date.now(),
+          building_id: 1,
+          resident_id: residentId,
+          resident_name: user.role === "bawab" ? "أستاذ أحمد زكي" : user.full_name,
+          resident_apartment: user.role === "bawab" ? "شقة 12" : (user.apartment_number || "شقة 12"),
+          resident_floor: user.floor_number || 4,
+          category: v.category,
+          urgency: v.urgency,
+          title: v.title,
+          details,
+          estimated_items_cost: v.total,
+          actual_items_cost: 0,
+          service_tip: v.tip,
+          payment_method: "cash",
+          is_paid: false,
+          notes: v.notes,
+          status: "pending",
+          created_at: "الآن"
+        }, created && typeof created === "object" && !Array.isArray(created) ? created : {});
+
+        state.orders.unshift(newOrder);
+        msg.submitted = true;
+        msg.isEditing = false;
+        renderAll();
+
+        showToast("تم إرسال الطلب لعم عبد السميع 🚀", `${esc(v.title)} (${grand} ج.م)`);
+        state.aiChatMessages.push({
+          role: "assistant",
+          text: `تم تسجيل الطلب (${v.title}):\n• إجمالي المشتريات (تقديري): ${v.total} ج.م\n• الإكرامية: ${v.tip} ج.م\n• الإجمالي: ${grand} ج.م`,
+          time: "الآن",
+          source: "system",
+          can_submit: false,
+          data: null
+        });
+      } catch (err) {
+        console.warn("Order submission failed:", err);
+        showToast("فشل إرسال الطلب ❌", esc(err && err.message ? err.message : err));
+      } finally {
+        msg.submitting = false;
+        renderAiChat();
+      }
     }
 
     // AI Chat Listeners
@@ -2037,18 +2286,40 @@
     // Delegated Order Dispatch & Interactive Editing in Chat
     const chatMsgContainer = document.getElementById("ai-chat-messages");
     if (chatMsgContainer) {
-      // Live recalculation of total cost when any item price changes
+      // Live recalculation: total = SUM(quantity x unit price). Blank/invalid values keep it incomplete.
       chatMsgContainer.addEventListener("input", (e) => {
-        if (e.target.classList.contains("ai-item-price")) {
-          const cardEl = e.target.closest(".ai-edit-card");
-          if (!cardEl) return;
-          const priceInputs = cardEl.querySelectorAll(".ai-item-price");
-          let sum = 0;
-          priceInputs.forEach(inp => {
-            sum += Number(inp.value || 0);
+        const t = e.target;
+        if (!t.classList.contains("ai-item-price") && !t.classList.contains("ai-item-qty") && !t.classList.contains("ai-item-name")) return;
+        const cardEl = t.closest(".ai-edit-card");
+        if (!cardEl) return;
+        const items = [];
+        cardEl.querySelectorAll(".ai-item-row").forEach(row => {
+          const nameEl = row.querySelector(".ai-item-name");
+          const qtyEl = row.querySelector(".ai-item-qty");
+          const priceEl = row.querySelector(".ai-item-price");
+          items.push({
+            name: nameEl ? nameEl.value : "",
+            quantity: qtyEl ? qtyEl.value : "",
+            estimated_price_egp: priceEl ? priceEl.value : ""
           });
-          const totalInp = cardEl.querySelector(".ai-total-cost");
-          if (totalInp) totalInp.value = sum;
+        });
+        const totalInp = cardEl.querySelector(".ai-total-cost");
+        if (totalInp) {
+          const total = analyzeAiItems(items).total;
+          totalInp.value = total === null ? "" : total;
+        }
+      });
+
+      // View-mode service-type picker (the orchestrator does not return a category)
+      chatMsgContainer.addEventListener("change", (e) => {
+        if (!e.target.classList.contains("ai-view-category")) return;
+        const idx = Number(e.target.dataset.msgIdx);
+        const m = state.aiChatMessages[idx];
+        if (m && m.data && m.data.structured_data) {
+          const sd = m.data.structured_data;
+          sd.category = CATEGORY_META[e.target.value] ? e.target.value : null;
+          (sd.items || []).forEach(it => { it.category = sd.category; });
+          renderAiChat();
         }
       });
 
@@ -2064,7 +2335,7 @@
           return;
         }
 
-        // 2. Add new item in edit mode
+        // 2. Add new item in edit mode (blank row: no fake quantity or price)
         const addItemBtn = e.target.closest(".ai-add-item-btn");
         if (addItemBtn) {
           const idx = Number(addItemBtn.dataset.msgIdx);
@@ -2073,20 +2344,16 @@
 
           const msg = state.aiChatMessages[idx];
           if (msg && msg.data && msg.data.structured_data) {
-            msg.data.structured_data.items = msg.data.structured_data.items || [];
-            msg.data.structured_data.items.push({
-              name: "صنف إضافي",
-              quantity: "١",
-              estimated_price_egp: 20,
-              category: msg.data.structured_data.category || "groceries"
-            });
-            msg.data.structured_data.estimated_total_cost_egp = (Number(msg.data.structured_data.estimated_total_cost_egp) || 0) + 20;
+            const sd = msg.data.structured_data;
+            sd.items = sd.items || [];
+            sd.items.push({ name: "", quantity: "", estimated_price_egp: "", category: sd.category || null });
+            sd.estimated_total_cost_egp = analyzeAiItems(sd.items).total;
             renderAiChat();
           }
           return;
         }
 
-        // 3. Delete item in edit mode
+        // 3. Delete item in edit mode (total is recalculated as SUM(quantity x unit price))
         const delItemBtn = e.target.closest(".ai-delete-item-btn");
         if (delItemBtn) {
           const idx = Number(delItemBtn.dataset.msgIdx);
@@ -2096,9 +2363,9 @@
 
           const msg = state.aiChatMessages[idx];
           if (msg && msg.data && msg.data.structured_data && msg.data.structured_data.items) {
-            msg.data.structured_data.items.splice(itemIdx, 1);
-            const newSum = msg.data.structured_data.items.reduce((acc, it) => acc + Number(it.estimated_price_egp || 0), 0);
-            msg.data.structured_data.estimated_total_cost_egp = newSum;
+            const sd = msg.data.structured_data;
+            sd.items.splice(itemIdx, 1);
+            sd.estimated_total_cost_egp = analyzeAiItems(sd.items).total;
             renderAiChat();
           }
           return;
